@@ -1,0 +1,51 @@
+/* EXTERNAL STYLESHEET */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f5f5f5;
+    margin: 20px;
+    color: #333333;
+}
+
+.main-card {
+    background-color: #ffffff;
+    border: 1px solid #cccccc;
+    padding: 20px;
+    max-width: 850px;
+    margin: 0 auto;
+}
+
+/* Form Table Alignment */
+.form-table {
+    width: 100%;
+    margin-bottom: 15px;
+}
+
+.form-table td {
+    padding: 6px;
+    vertical-align: middle;
+}
+
+.form-input {
+    width: 95%;
+    padding: 6px;
+    border: 1px solid #999999;
+    border-radius: 0px; /* Square edges */
+    box-sizing: border-box;
+}
+
+/* Data Table Borders */
+.table-grid {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+.table-grid th, .table-grid td {
+    border: 1px solid #dddddd;
+    padding: 8px;
+    text-align: left;
+}
+
+.table-grid th {
+    background-color: #eeeeee;
+}

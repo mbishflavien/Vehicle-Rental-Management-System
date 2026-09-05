@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://xmlns.jcp.org/jsf/html"
+      xmlns:f="http://xmlns.jcp.org/jsf/core">
+<h:head>
+    <title>Customer Management - VRMS</title>
+    <!-- EXTERNAL CSS -->
+    <link rel="stylesheet" type="text/css" href="#{request.contextPath}/resources/css/styles.css"/>
+
+    <!-- INTERNAL CSS -->
+    <style>
+        /* Square, mediocre colored buttons */
+        .btn-square {
+            border: 1px solid #777777;
+            border-radius: 0px; /* Square buttons */
+            padding: 6px 14px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .btn-save { background-color: #4a777a; color: #ffffff; }
+        .btn-edit { background-color: #d1a153; color: #ffffff; }
+        .btn-delete { background-color: #b55353; color: #ffffff; }
+        .nav-link { text-decoration: none; font-weight: bold; padding: 4px 8px; }
+    </style>
+</h:head>
+<h:body>
+    <div class="main-card">
+        <!-- INLINE CSS -->
+        <div style="border-bottom: 1px solid #cccccc; padding-bottom: 10px; margin-bottom: 15px;">
+            <h2 style="margin: 0; display: inline-block;">Customer Management</h2>
+            <div style="float: right;">
+                <a href="customer.xhtml" class="nav-link" style="color: #4a777a;">Customers</a> |
+                <a href="vehicle.xhtml" class="nav-link" style="color: #666666;">Vehicles</a>
+            </div>
+            <div style="clear: both;"></div>
+        </div>
+
+        <h:form id="customerForm">
+            <h:messages globalOnly="true" style="color: green; font-weight: bold;"/>
+            <h:inputHidden value="#{customerBean.customer.customerId}" />
+
+            <!-- Clean Aligned Form Table -->
+            <table class="form-table">
+                <tr>
+                    <td style="width: 25%; font-weight: bold;">Full Name:</td>
+                    <td>
+                        <h:inputText id="name" value="#{customerBean.customer.fullName}" required="true" requiredMessage="Name required" styleClass="form-input"/>
+                        <h:message for="name" style="color: red; font-size: 11px;"/>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="font-weight: bold;">Email Address:</td>
+                    <td>
+                        <h:inputText id="email" value="#{customerBean.customer.email}" required="true" requiredMessage="Email required" styleClass="form-input"/>
+                        <h:message for="email" style="color: red; font-size: 11px;"/>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="font-weight: bold;">Phone Number:</td>
+                    <td>
+                        <h:inputText id="phone" value="#{customerBean.customer.phoneNumber}" styleClass="form-input"/>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="font-weight: bold;">Driver License:</td>
+                    <td>
+                        <h:inputText id="license" value="#{customerBean.customer.driverLicenseNumber}" required="true" requiredMessage="License required" styleClass="form-input"/>
+                        <h:message for="license" style="color: red; font-size: 11px;"/>
+                    </td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td>
+                        <h:commandButton value="Save Customer" action="#{customerBean.saveCustomer}" styleClass="btn-square btn-save">
+                            <f:ajax execute="@form" render="@form"/>
+                        </h:commandButton>
+                    </td>
+                </tr>
+            </table>
+
+            <!-- INLINE CSS -->
+            <hr style="border: 0; border-top: 1px solid #dddddd; margin: 20px 0;"/>
+
+            <h3 style="margin-bottom: 10px;">Registered Customers</h3>
+
+            <h:dataTable value="#{customerBean.customerList}" var="c" styleClass="table-grid" id="customerTable">
+                <h:column>
+                    <f:facet name="header">ID</f:facet>
+                    #{c.customerId}
+                </h:column>
+                <h:column>
+                    <f:facet name="header">Full Name</f:facet>
+                    #{c.fullName}
+                </h:column>
+                <h:column>
+                    <f:facet name="header">Email</f:facet>
+                    #{c.email}
+                </h:column>
+                <h:column>
+                    <f:facet name="header">Phone</f:facet>
+                    #{c.phoneNumber}
+                </h:column>
+                <h:column>
+                    <f:facet name="header">License Number</f:facet>
+                    #{c.driverLicenseNumber}
+                </h:column>
+                <h:column>
+                    <f:facet name="header">Actions</f:facet>
+                    <h:commandButton value="Edit" action="#{customerBean.editCustomer(c)}" styleClass="btn-square btn-edit">
+                        <f:ajax render=":customerForm"/>
+                    </h:commandButton>
+                    &#160;
+                    <h:commandButton value="Delete" action="#{customerBean.deleteCustomer(c)}" styleClass="btn-square btn-delete"
+                                     onclick="return confirm('Delete this record?');">
+                        <f:ajax render=":customerForm"/>
+                    </h:commandButton>
+                </h:column>
+            </h:dataTable>
+        </h:form>
+    </div>
+</h:body>
+</html>
