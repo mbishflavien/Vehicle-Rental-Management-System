@@ -1,47 +1,45 @@
 package com.vrms.model;
 
+import org.hibernate.annotations.GenericGenerator;
 import javax.persistence.*;
-import javax.validation.constraints.*;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Pattern;
+import java.util.UUID;
 
 @Entity
 @Table(name = "vehicles")
 public class Vehicle {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long vehicleId;
+    @GeneratedValue(generator = "UUID")
+    @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
+    @Column(name = "vehicle_id", updatable = false, nullable = false)
+    private UUID vehicleId;
 
-    @NotNull(message = "Plate number is required")
-    @Size(min = 5, max = 10, message = "Plate number must be between 5 and 10 characters")
-    @Column(name = "plate_number", nullable = false, unique = true)
+    @NotNull
+    @Pattern(regexp = "RAB[0-9]{3}[A-Z]", message = "Plate number must follow Rwandan format e.g. RAB123A")
+    @Column(unique = true, nullable = false)
     private String plateNumber;
 
-    @NotNull(message = "Vehicle model is required")
-    @Column(name = "model", nullable = false)
+    @NotNull
     private String model;
 
-    @NotNull(message = "Daily rate is required")
-    @Min(value = 10, message = "Minimum daily rate is 10")
-    @Column(name = "daily_rate", nullable = false)
+    @NotNull
     private Double dailyRate;
 
-    @Column(name = "status")
-    private String status = "AVAILABLE";
+    @Enumerated(EnumType.STRING)
+    private VehicleStatus vehicleStatus = VehicleStatus.AVAILABLE;
 
     public Vehicle() {}
 
-    public Long getVehicleId() { return vehicleId; }
-    public void setVehicleId(Long vehicleId) { this.vehicleId = vehicleId; }
-
+    public UUID getVehicleId() { return vehicleId; }
+    public void setVehicleId(UUID vehicleId) { this.vehicleId = vehicleId; }
     public String getPlateNumber() { return plateNumber; }
     public void setPlateNumber(String plateNumber) { this.plateNumber = plateNumber; }
-
     public String getModel() { return model; }
     public void setModel(String model) { this.model = model; }
-
     public Double getDailyRate() { return dailyRate; }
     public void setDailyRate(Double dailyRate) { this.dailyRate = dailyRate; }
-
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public VehicleStatus getVehicleStatus() { return vehicleStatus; }
+    public void setVehicleStatus(VehicleStatus vehicleStatus) { this.vehicleStatus = vehicleStatus; }
 }
