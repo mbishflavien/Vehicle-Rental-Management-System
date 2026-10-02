@@ -1,12 +1,12 @@
 package com.vrms.controller;
 
 import com.vrms.model.Customer;
-import com.vrms.service.VRMSService;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.vrms.service.CustomerService;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import javax.validation.Valid;
 import java.util.List;
 import java.util.UUID;
 
@@ -14,31 +14,31 @@ import java.util.UUID;
 @RequestMapping("/api/customers")
 public class CustomerController {
 
-    @Autowired private VRMSService service;
+    private final CustomerService service;
+
+    public CustomerController(CustomerService service) {
+        this.service = service;
+    }
 
     @GetMapping
-    public List<Customer> getAllCustomers() { return service.getAllCustomers(); }
+    public List<Customer> getAllCustomers() { return service.getAll(); }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Customer> getCustomer(@PathVariable UUID id) {
-        Customer c = service.getCustomerById(id);
-        return c != null ? ResponseEntity.ok(c) : ResponseEntity.notFound().build();
-    }
+    public Customer getCustomer(@PathVariable UUID id) { return service.getById(id); }
 
     @PostMapping
     public ResponseEntity<Customer> createCustomer(@Valid @RequestBody Customer customer) {
-        return ResponseEntity.ok(service.saveCustomer(customer));
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.create(customer));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Customer> updateCustomer(@PathVariable UUID id, @Valid @RequestBody Customer customer) {
-        customer.setCustomerId(id);
-        return ResponseEntity.ok(service.saveCustomer(customer));
+    public Customer updateCustomer(@PathVariable UUID id, @Valid @RequestBody Customer customer) {
+        return service.update(id, customer);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteCustomer(@PathVariable UUID id) {
-        service.deleteCustomer(id);
+        service.delete(id);
         return ResponseEntity.noContent().build();
     }
 }
