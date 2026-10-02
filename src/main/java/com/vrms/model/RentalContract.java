@@ -1,8 +1,11 @@
 package com.vrms.model;
 
-import org.hibernate.annotations.GenericGenerator;
-import javax.persistence.*;
-import javax.validation.constraints.NotNull;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
+
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -11,14 +14,14 @@ import java.util.UUID;
 public class RentalContract {
 
     @Id
-    @GeneratedValue(generator = "UUID")
-    @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "contract_id", updatable = false, nullable = false)
     private UUID contractId;
 
     @NotNull
     private LocalDate startDate;
 
+    /** Return date. Rental days = endDate - startDate. */
     @NotNull
     private LocalDate endDate;
 
@@ -27,13 +30,26 @@ public class RentalContract {
     @Enumerated(EnumType.STRING)
     private ContractStatus contractStatus = ContractStatus.PENDING;
 
-    @ManyToOne
+    private String pickupLocation;
+
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "customer_id", nullable = false)
     private Customer customer;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "vehicle_id", nullable = false)
     private Vehicle vehicle;
+
+    /** Staff member who issued or approved the contract. Null while an online booking is pending. */
+    @JsonIgnore
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "issued_by")
+    private User issuedBy;
+
+    private Instant createdAt;
+
+    @PrePersist
+    void onCreate() { createdAt = Instant.now(); }
 
     public RentalContract() {}
 
@@ -47,8 +63,16 @@ public class RentalContract {
     public void setTotalCost(Double totalCost) { this.totalCost = totalCost; }
     public ContractStatus getContractStatus() { return contractStatus; }
     public void setContractStatus(ContractStatus contractStatus) { this.contractStatus = contractStatus; }
+    public String getPickupLocation() { return pickupLocation; }
+    public void setPickupLocation(String pickupLocation) { this.pickupLocation = pickupLocation; }
     public Customer getCustomer() { return customer; }
     public void setCustomer(Customer customer) { this.customer = customer; }
     public Vehicle getVehicle() { return vehicle; }
     public void setVehicle(Vehicle vehicle) { this.vehicle = vehicle; }
+    public User getIssuedBy() { return issuedBy; }
+    public void setIssuedBy(User issuedBy) { this.issuedBy = issuedBy; }
+    public Instant getCreatedAt() { return createdAt; }
+
+    @JsonProperty(value = "issuedByName", access = JsonProperty.Access.READ_ONLY)
+    public String issuedByName() { return issuedBy == null ? null : issuedBy.getFullName(); }
 }
