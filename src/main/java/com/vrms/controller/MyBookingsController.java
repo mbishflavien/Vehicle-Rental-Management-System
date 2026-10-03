@@ -10,6 +10,7 @@ import com.vrms.service.ContractService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,6 +19,7 @@ import java.util.UUID;
 /** The signed-in customer's own bookings. */
 @RestController
 @RequestMapping("/api/me/bookings")
+@PreAuthorize("hasAuthority('BOOKING_OWN')")
 public class MyBookingsController {
 
     private final ContractService contractService;

@@ -6,7 +6,8 @@ import Contracts from "./admin/Contracts";
 import Customers from "./admin/Customers";
 import Dashboard from "./admin/Dashboard";
 import Logs from "./admin/Logs";
-import { AuthProvider, useAuth } from "./auth";
+import Staff from "./admin/Staff";
+import { AuthProvider, isStaff, useAuth } from "./auth";
 import { FeedbackProvider, Loading } from "./components/ui";
 import type { Role } from "./api";
 import AuthPage from "./pages/Auth";
@@ -15,12 +16,12 @@ import HomePage from "./pages/Home";
 import MyBookingsPage from "./pages/MyBookings";
 
 /** Sends signed-out visitors to sign in (and back afterwards); other roles go to their own home. */
-function RequireRole({ role, children }: { role: Role; children: ReactNode }) {
+function RequireRole({ roles, children }: { roles: Role[]; children: ReactNode }) {
   const { user, loading } = useAuth();
   const location = useLocation();
   if (loading) return <div className="page-loading"><Loading/></div>;
   if (!user) return <Navigate to={`/signin?next=${encodeURIComponent(location.pathname + location.search)}`} replace/>;
-  if (user.role !== role) return <Navigate to={user.role === "ADMIN" ? "/admin" : "/fleet"} replace/>;
+  if (!roles.includes(user.role)) return <Navigate to={isStaff(user) ? "/admin" : "/fleet"} replace/>;
   return <>{children}</>;
 }
 
@@ -46,13 +47,14 @@ export default function App() {
           <Route path="/" element={<HomePage/>}/>
           <Route path="/fleet" element={<FleetPage/>}/>
           <Route path="/signin" element={<AuthPage/>}/>
-          <Route path="/account/bookings" element={<RequireRole role="CUSTOMER"><MyBookingsPage/></RequireRole>}/>
-          <Route path="/admin" element={<RequireRole role="ADMIN"><AdminShell/></RequireRole>}>
+          <Route path="/account/bookings" element={<RequireRole roles={["CUSTOMER"]}><MyBookingsPage/></RequireRole>}/>
+          <Route path="/admin" element={<RequireRole roles={["ADMIN", "AGENT"]}><AdminShell/></RequireRole>}>
             <Route index element={<Dashboard/>}/>
             <Route path="fleet" element={<Assets/>}/>
             <Route path="customers" element={<Customers/>}/>
             <Route path="contracts" element={<Contracts/>}/>
             <Route path="logs" element={<Logs/>}/>
+            <Route path="staff" element={<Staff/>}/>
           </Route>
           <Route path="*" element={<Navigate to="/" replace/>}/>
         </Routes>

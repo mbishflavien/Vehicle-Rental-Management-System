@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { api, setUnauthorizedHandler, tokenStore, type AuthResponse, type UserView } from "./api";
+import { api, setUnauthorizedHandler, tokenStore, type AuthResponse, type Permission, type UserView } from "./api";
 
 interface AuthState {
   user: UserView | null;
@@ -37,6 +37,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo(() => ({ user, loading, signIn, signOut }), [user, loading, signIn, signOut]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
+
+/** Whether the signed-in user holds a permission. The API enforces the same rules; this only hides UI. */
+export function useCan(): (permission: Permission) => boolean {
+  const { user } = useAuth();
+  return (permission) => !!user?.permissions?.includes(permission);
+}
+
+export const isStaff = (user: UserView | null) => user?.role === "ADMIN" || user?.role === "AGENT";
 
 export function useAuth(): AuthState {
   const ctx = useContext(AuthContext);

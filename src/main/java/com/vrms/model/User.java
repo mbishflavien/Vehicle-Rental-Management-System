@@ -32,6 +32,12 @@ public class User {
     /** Shown under the name in the staff console, e.g. "Operations Manager". */
     private String jobTitle;
 
+    /** Disabled accounts can't sign in, and their existing tokens stop working immediately. */
+    @Column(nullable = false)
+    private boolean enabled = true;
+
+    private Instant lastLoginAt;
+
     private Instant createdAt;
 
     @PrePersist
@@ -51,5 +57,9 @@ public class User {
     public void setRole(Role role) { this.role = role; }
     public String getJobTitle() { return jobTitle; }
     public void setJobTitle(String jobTitle) { this.jobTitle = jobTitle; }
+    public boolean isEnabled() { return enabled; }
+    public void setEnabled(boolean enabled) { this.enabled = enabled; }
+    public Instant getLastLoginAt() { return lastLoginAt; }
+    public void setLastLoginAt(Instant lastLoginAt) { this.lastLoginAt = lastLoginAt; }
     public Instant getCreatedAt() { return createdAt; }
 }

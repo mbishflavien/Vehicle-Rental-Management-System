@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { api, ApiError } from "../api";
-import { useAuth } from "../auth";
+import { isStaff, useAuth } from "../auth";
 import { PublicNav } from "../components/public";
 import { Button, Field, Icon, Wordmark } from "../components/ui";
 import { images } from "../format";
@@ -24,7 +24,7 @@ export default function AuthPage() {
   const [showForgot, setShowForgot] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  if (user && !busy) return <Navigate to={next ?? (user.role === "ADMIN" ? "/admin" : "/account/bookings")} replace/>;
+  if (user && !busy) return <Navigate to={next ?? (isStaff(user) ? "/admin" : "/account/bookings")} replace/>;
 
   const setTab = (t: Tab) => {
     const p = new URLSearchParams(params);
@@ -43,6 +43,7 @@ export default function AuthPage() {
       if (form.phoneNumber && !/^\+?[0-9 ]{9,16}$/.test(form.phoneNumber.trim())) e.phoneNumber = "Phone number is not valid, e.g. +250 788 123 456";
       if (!/^DL-[A-Z0-9-]+$/i.test(form.driverLicenseNumber.trim())) e.driverLicenseNumber = "Driver License must start with 'DL-', e.g. DL-48219";
       if (form.password.length < 8) e.password = "Password must be at least 8 characters";
+      else if (!/[A-Za-z]/.test(form.password) || !/\d/.test(form.password)) e.password = "Password must contain letters and numbers";
     } else if (!form.password) {
       e.password = "Password is required";
     }
@@ -62,7 +63,7 @@ export default function AuthPage() {
         ? await api.login(form.email.trim(), form.password)
         : await api.register({ ...form, fullName: form.fullName.trim(), email: form.email.trim(), phoneNumber: form.phoneNumber.trim(), driverLicenseNumber: form.driverLicenseNumber.trim().toUpperCase() });
       signIn(res);
-      navigate(next ?? (res.user.role === "ADMIN" ? "/admin" : "/fleet"), { replace: true });
+      navigate(next ?? (isStaff(res.user) ? "/admin" : "/fleet"), { replace: true });
     } catch (err) {
       if (err instanceof ApiError) { setErrors(err.fieldErrors); setFormError(err.message); }
     } finally {
@@ -92,7 +93,7 @@ export default function AuthPage() {
             <Field label="Phone number" type="tel" placeholder="+250 7XX XXX XXX" autoComplete="tel" value={form.phoneNumber} onChange={set("phoneNumber")} error={errors.phoneNumber}/>
             <Field label="Driver license number" placeholder="DL-XXXXX" value={form.driverLicenseNumber} onChange={set("driverLicenseNumber")} error={errors.driverLicenseNumber}/>
           </>}
-          <Field label="Password" type="password" placeholder="••••••••" autoComplete={registering ? "new-password" : "current-password"} value={form.password} onChange={set("password")} error={errors.password} hint={registering ? "At least 8 characters." : undefined}/>
+          <Field label="Password" type="password" placeholder="••••••••" autoComplete={registering ? "new-password" : "current-password"} value={form.password} onChange={set("password")} error={errors.password} hint={registering ? "At least 8 characters, with letters and numbers." : undefined}/>
           {formError && <p className="form-error" role="alert">{formError}</p>}
           <Button type="submit" className="full" busy={busy}>{registering ? "Register & continue" : "Sign in to portal"} <Icon name="arrow" size={17}/></Button>
           {!registering && <button type="button" className="forgot" onClick={() => setShowForgot(!showForgot)}>Forgot your password?</button>}

@@ -1,7 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../api";
-import { useAuth } from "../auth";
+import type { Permission } from "../api";
+import { useAuth, useCan } from "../auth";
+import { ChangePasswordModal } from "../components/account";
 import { Icon, Wordmark } from "../components/ui";
 import { greeting, initials } from "../format";
 
@@ -21,12 +23,13 @@ export const useAdmin = () => {
   return c;
 };
 
-const nav = [
-  { to: "/admin", label: "Dashboard", icon: "dashboard", end: true },
+const nav: { to: string; label: string; icon: string; end?: boolean; needs?: Permission }[] = [
+  { to: "/admin", label: "Dashboard", icon: "dashboard", end: true, needs: "DASHBOARD_READ" },
   { to: "/admin/fleet", label: "Fleet Assets", icon: "car" },
-  { to: "/admin/customers", label: "Customer Directory", icon: "users" },
-  { to: "/admin/contracts", label: "Rental Contracts", icon: "file" },
-  { to: "/admin/logs", label: "System Logs", icon: "logs" },
+  { to: "/admin/customers", label: "Customer Directory", icon: "users", needs: "CUSTOMER_READ" },
+  { to: "/admin/contracts", label: "Rental Contracts", icon: "file", needs: "CONTRACT_READ" },
+  { to: "/admin/logs", label: "System Logs", icon: "logs", needs: "AUDIT_READ" },
+  { to: "/admin/staff", label: "Staff & Access", icon: "shield", needs: "STAFF_MANAGE" },
 ];
 
 const titles: Record<string, string> = {
@@ -34,6 +37,7 @@ const titles: Record<string, string> = {
   "/admin/customers": "Customer Directory",
   "/admin/contracts": "Rental Contracts",
   "/admin/logs": "System Logs",
+  "/admin/staff": "Staff & Access",
 };
 
 const topDate = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "long" });
@@ -45,6 +49,8 @@ export default function AdminShell() {
   const [query, setQuery] = useState("");
   const [pending, setPending] = useState(0);
   const [userMenu, setUserMenu] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
+  const can = useCan();
 
   const refreshCounts = useCallback(() => {
     api.dashboard().then((s) => setPending(s.pendingContracts)).catch(() => {});
@@ -63,18 +69,19 @@ export default function AdminShell() {
       <aside className="sidebar">
         <Wordmark admin to="/admin"/>
         <div className="workspace-label">Workspace</div>
-        <nav>{nav.map((n) => <NavLink key={n.to} to={n.to} end={n.end} title={n.label}>
+        <nav>{nav.filter((n) => !n.needs || can(n.needs)).map((n) => <NavLink key={n.to} to={n.to} end={n.end} title={n.label}>
           <Icon name={n.icon}/><span>{n.label}</span>{n.to === "/admin/contracts" && pending > 0 && <b>{pending}</b>}
         </NavLink>)}</nav>
         <div className="sidebar-spacer"/>
         <NavLink className="back-site" to="/"><Icon name="arrow" size={17}/> View public site</NavLink>
         <div className="user-menu-wrap">
           {userMenu && <div className="row-menu-list user-menu" role="menu">
+            <button role="menuitem" onClick={() => { setUserMenu(false); setChangingPassword(true); }}><Icon name="shield" size={16}/> Change password</button>
             <button role="menuitem" onClick={() => { signOut(); navigate("/signin"); }}><Icon name="logout" size={16}/> Sign out</button>
           </div>}
           <button className="user-card" onClick={() => setUserMenu(!userMenu)} aria-expanded={userMenu} aria-label="Account menu">
             <span className="avatar">{initials(user?.fullName ?? "")}</span>
-            <div><strong>{user?.fullName}</strong><small>{user?.jobTitle ?? "VRMS staff"}</small></div>
+            <div><strong>{user?.fullName}</strong><small>{user?.jobTitle ?? (user?.role === "ADMIN" ? "Administrator" : "Rental agent")}</small></div>
             <Icon name="chevron" size={16}/>
           </button>
         </div>
@@ -93,6 +100,7 @@ export default function AdminShell() {
         <div className="admin-content"><Outlet/></div>
       </section>
     </div>
+    {changingPassword && <ChangePasswordModal close={() => setChangingPassword(false)}/>}
   </Ctx.Provider>;
 }
 

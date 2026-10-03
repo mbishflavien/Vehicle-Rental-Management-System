@@ -2,6 +2,7 @@ package com.vrms.service;
 
 import com.vrms.dto.AuthResponse;
 import com.vrms.dto.LoginRequest;
+import com.vrms.dto.PasswordChangeRequest;
 import com.vrms.dto.RegisterRequest;
 import com.vrms.dto.UserView;
 import com.vrms.exception.ApiException;
@@ -11,11 +12,13 @@ import com.vrms.model.User;
 import com.vrms.repository.CustomerRepository;
 import com.vrms.repository.UserRepository;
 import com.vrms.security.JwtService;
+import com.vrms.security.LoginAttemptService;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.UUID;
 
 @Service
@@ -25,14 +28,17 @@ public class AuthService {
     private final CustomerRepository customerRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final LoginAttemptService loginAttempts;
     private final AuditService audit;
 
     public AuthService(UserRepository userRepository, CustomerRepository customerRepository,
-                       PasswordEncoder passwordEncoder, JwtService jwtService, AuditService audit) {
+                       PasswordEncoder passwordEncoder, JwtService jwtService,
+                       LoginAttemptService loginAttempts, AuditService audit) {
         this.userRepository = userRepository;
         this.customerRepository = customerRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.loginAttempts = loginAttempts;
         this.audit = audit;
     }
 
@@ -63,6 +69,7 @@ public class AuthService {
         user.setEmail(email);
         user.setPasswordHash(passwordEncoder.encode(req.password()));
         user.setRole(Role.CUSTOMER);
+        user.setLastLoginAt(Instant.now());
         user = userRepository.save(user);
 
         if (customer == null) {
@@ -82,16 +89,45 @@ public class AuthService {
     }
 
     @Transactional
-    public AuthResponse login(LoginRequest req) {
-        User user = userRepository.findByEmailIgnoreCase(req.email().trim())
+    public AuthResponse login(LoginRequest req, String clientIp) {
+        String email = req.email().trim();
+        loginAttempts.checkAllowed(email, clientIp);
+
+        User user = userRepository.findByEmailIgnoreCase(email)
                 .filter(u -> passwordEncoder.matches(req.password(), u.getPasswordHash()))
-                .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Invalid email or password"));
-        audit.log("User signed in", user.getFullName(), "Successful authentication (" + user.getRole().name().toLowerCase() + ")");
+                .orElse(null);
+        if (user == null) {
+            loginAttempts.recordFailure(email, clientIp);
+            audit.log("Failed sign-in", "System", "Wrong email or password for " + email.toLowerCase() + " from " + clientIp);
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
+        }
+        if (!user.isEnabled()) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "This account has been disabled. Contact the VRMS team.");
+        }
+        loginAttempts.recordSuccess(email, clientIp);
+        user.setLastLoginAt(Instant.now());
+        userRepository.save(user);
+        audit.log("User signed in", user.getFullName(), "Successful authentication (" + user.getRole().name().toLowerCase() + ") from " + clientIp);
         return response(user, customerIdOf(user));
+    }
+
+    @Transactional
+    public void changePassword(User current, PasswordChangeRequest req) {
+        User user = userRepository.findById(current.getUserId()).orElseThrow(() -> ApiException.notFound("User"));
+        if (!passwordEncoder.matches(req.currentPassword(), user.getPasswordHash())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Current password is not correct", "currentPassword");
+        }
+        user.setPasswordHash(passwordEncoder.encode(req.newPassword()));
+        userRepository.save(user);
+        audit.log("Password changed", user.getFullName(), "Password updated by the account owner");
     }
 
     public UserView me(User user) {
         return UserView.of(user, customerIdOf(user));
+    }
+
+    public AuthResponse tokenFor(User user) {
+        return response(user, customerIdOf(user));
     }
 
     private UUID customerIdOf(User user) {
@@ -99,6 +135,6 @@ public class AuthService {
     }
 
     private AuthResponse response(User user, UUID customerId) {
-        return new AuthResponse(jwtService.issueToken(user), jwtService.lifetimeSeconds(), UserView.of(user, customerId));
+        return new AuthResponse(jwtService.issueToken(user), "Bearer", jwtService.lifetimeSeconds(), UserView.of(user, customerId));
     }
 }

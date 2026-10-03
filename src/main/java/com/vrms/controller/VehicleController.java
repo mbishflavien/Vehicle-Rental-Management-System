@@ -5,6 +5,7 @@ import com.vrms.service.VehicleService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -28,16 +29,19 @@ public class VehicleController {
     public Vehicle getVehicle(@PathVariable UUID id) { return service.getById(id); }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('VEHICLE_WRITE')")
     public ResponseEntity<Vehicle> createVehicle(@Valid @RequestBody Vehicle vehicle) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.create(vehicle));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('VEHICLE_WRITE')")
     public Vehicle updateVehicle(@PathVariable UUID id, @Valid @RequestBody Vehicle vehicle) {
         return service.update(id, vehicle);
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('VEHICLE_DELETE')")
     public ResponseEntity<Void> deleteVehicle(@PathVariable UUID id) {
         service.delete(id);
         return ResponseEntity.noContent().build();

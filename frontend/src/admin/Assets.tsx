@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { api, errorMessage, type Vehicle } from "../api";
+import { useCan } from "../auth";
 import { Button, DataTable, EmptyState, ErrorBanner, Icon, Loading, RowMenu, StatusPill, TableFooter, useFeedback, usePaged } from "../components/ui";
 import { CATEGORIES, label, plate, rwf, shortId } from "../format";
 import { AdminPageHeader, AdminSearch, matches, useAdmin } from "./AdminShell";
@@ -8,6 +9,7 @@ import { VehicleDrawer } from "./forms";
 export default function Assets() {
   const { query, refreshCounts } = useAdmin();
   const { toast, confirm } = useFeedback();
+  const can = useCan();
   const [vehicles, setVehicles] = useState<Vehicle[] | null>(null);
   const [error, setError] = useState("");
   const [category, setCategory] = useState("");
@@ -62,7 +64,7 @@ export default function Assets() {
       <label className="select-button"><select value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Status">
         <option value="">Any status</option>{["AVAILABLE", "RENTED", "RESERVED", "MAINTENANCE"].map((s) => <option key={s} value={s}>{label(s)}</option>)}
       </select><Icon name="chevron" size={16}/></label>
-      <Button onClick={() => setEditing(null)}><Icon name="plus" size={17}/> Add new vehicle</Button>
+      {can("VEHICLE_WRITE") && <Button onClick={() => setEditing(null)}><Icon name="plus" size={17}/> Add new vehicle</Button>}
     </AdminPageHeader>
     {error && <ErrorBanner message={error} onRetry={load}/>}
     <section className="admin-card">
@@ -82,7 +84,7 @@ export default function Assets() {
               v.vehicleStatus === "MAINTENANCE"
                 ? { label: "Mark available", onSelect: () => setVehicleStatus(v, "AVAILABLE") }
                 : { label: "Send to maintenance", onSelect: () => setVehicleStatus(v, "MAINTENANCE"), disabled: v.vehicleStatus !== "AVAILABLE" },
-              { label: "Delete vehicle", onSelect: () => remove(v), danger: true },
+              ...(can("VEHICLE_DELETE") ? [{ label: "Delete vehicle", onSelect: () => remove(v), danger: true }] : []),
             ]}/></td>
           </tr>)}
         </DataTable>

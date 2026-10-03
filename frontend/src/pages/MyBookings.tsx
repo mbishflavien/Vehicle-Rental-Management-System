@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, errorMessage, type Contract } from "../api";
 import { useAuth } from "../auth";
+import { ChangePasswordModal } from "../components/account";
 import { Footer, PublicNav } from "../components/public";
 import { Button, ButtonLink, EmptyState, ErrorBanner, Icon, Loading, StatusPill, useFeedback } from "../components/ui";
 import { daysBetween, period, plate, rwf, shortId, vehicleImage } from "../format";
@@ -10,6 +11,7 @@ export default function MyBookingsPage() {
   const { toast, confirm } = useFeedback();
   const [bookings, setBookings] = useState<Contract[] | null>(null);
   const [error, setError] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
 
   const load = () => {
     setError("");
@@ -36,7 +38,7 @@ export default function MyBookingsPage() {
 
   return <div className="inner-page">
     <PublicNav/>
-    <header className="page-hero compact-hero"><span className="eyebrow">My bookings</span><h1>Hello, {user?.fullName.split(" ")[0]}.</h1><p>Your reservations and rentals with VRMS, newest first.</p></header>
+    <header className="page-hero compact-hero"><span className="eyebrow">My bookings</span><h1>Hello, {user?.fullName.split(" ")[0]}.</h1><p>Your reservations and rentals with VRMS, newest first.</p><button className="text-link" onClick={() => setChangingPassword(true)}>Change password</button></header>
     <main className="container bookings-list">
       {error && <ErrorBanner message={error} onRetry={load}/>}
       {bookings === null && !error && <Loading/>}
@@ -56,5 +58,6 @@ export default function MyBookingsPage() {
       </article>)}
     </main>
     <Footer/>
+    {changingPassword && <ChangePasswordModal close={() => setChangingPassword(false)}/>}
   </div>;
 }

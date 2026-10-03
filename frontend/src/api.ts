@@ -1,7 +1,11 @@
 // Typed client for the Spring Boot REST API. Every error from the API has the shape
 // { status, message, fieldErrors: { field: message }, timestamp } (see GlobalExceptionHandler).
 
-export type Role = "ADMIN" | "CUSTOMER";
+export type Role = "ADMIN" | "AGENT" | "CUSTOMER";
+export type Permission =
+  | "VEHICLE_WRITE" | "VEHICLE_DELETE" | "CUSTOMER_READ" | "CUSTOMER_WRITE" | "CUSTOMER_DELETE"
+  | "CONTRACT_READ" | "CONTRACT_WRITE" | "CONTRACT_DELETE" | "BRANCH_MANAGE" | "DASHBOARD_READ"
+  | "AUDIT_READ" | "NOTIFICATION_READ" | "DOCUMENT_READ" | "STAFF_MANAGE" | "BOOKING_OWN";
 export type VehicleStatus = "AVAILABLE" | "RENTED" | "MAINTENANCE" | "RESERVED";
 export type ContractStatus = "PENDING" | "ACTIVE" | "COMPLETED" | "CANCELLED";
 export type VehicleCategory = "SUV" | "SEDAN" | "HATCHBACK" | "VAN" | "COMMERCIAL";
@@ -15,10 +19,24 @@ export interface UserView {
   role: Role;
   jobTitle: string | null;
   customerId: string | null;
+  permissions: Permission[];
+  enabled: boolean;
+  lastLoginAt: string | null;
+  createdAt: string | null;
+}
+
+export interface StaffInput {
+  fullName: string;
+  email: string;
+  jobTitle: string | null;
+  role: Role;
+  password?: string;
+  enabled?: boolean;
 }
 
 export interface AuthResponse {
   token: string;
+  tokenType: string;
   expiresInSeconds: number;
   user: UserView;
 }
@@ -154,6 +172,12 @@ export const api = {
   register: (body: { fullName: string; email: string; phoneNumber: string; driverLicenseNumber: string; password: string }) =>
     request<AuthResponse>("POST", "/auth/register", body),
   me: () => request<UserView>("GET", "/auth/me"),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    request<void>("PUT", "/auth/password", { currentPassword, newPassword }),
+
+  staff: () => request<UserView[]>("GET", "/staff"),
+  createStaff: (body: StaffInput) => request<UserView>("POST", "/staff", body),
+  updateStaff: (id: string, body: StaffInput) => request<UserView>("PUT", `/staff/${id}`, body),
 
   branches: () => request<Branch[]>("GET", "/branches"),
 

@@ -22,6 +22,9 @@ export function Icon({ name, size = 20 }: { name: string; size?: number }) {
     menu: <><path d="M4 7h16M4 12h16M4 17h16"/></>,
     logout: <><path d="M15 4h4v16h-4"/><path d="M10 8 6 12l4 4M6 12h10"/></>,
     check: <path d="m5 12 5 5 9-10"/>,
+    shield: <><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/></>,
+    mail: <><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></>,
+    upload: <><path d="M12 16V4m0 0-5 5m5-5 5 5"/><path d="M5 20h14"/></>,
   };
   return <svg className="icon" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }

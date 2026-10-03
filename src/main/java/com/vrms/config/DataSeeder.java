@@ -60,6 +60,10 @@ public class DataSeeder implements ApplicationRunner {
     private String adminName;
     @Value("${vrms.admin.job-title:Operations Manager}")
     private String adminJobTitle;
+    @Value("${vrms.agent.email:}")
+    private String agentEmail;
+    @Value("${vrms.agent.password:}")
+    private String agentPassword;
     @Value("${vrms.seed.demo-data:true}")
     private boolean seedDemoData;
 
@@ -82,6 +86,9 @@ public class DataSeeder implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         seedBranches();
         User admin = seedStaff(adminEmail, adminPassword, adminName, adminJobTitle, Role.ADMIN);
+        if (!agentEmail.isBlank()) {
+            seedStaff(agentEmail, agentPassword, "Jean Claude Mugisha", "Rental Agent, Airport desk", Role.AGENT);
+        }
         if (seedDemoData && contractRepository.count() == 0) {
             seedDemo(admin);
         }

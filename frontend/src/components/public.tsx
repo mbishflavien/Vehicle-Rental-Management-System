@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState, type FormEvent } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { api, ApiError, type Vehicle } from "../api";
-import { useAuth } from "../auth";
+import { isStaff, useAuth } from "../auth";
 import { branchOptions, useBranches } from "../branches";
 import { addDays, daysBetween, label, plate, rwf, specs, today, vehicleImage } from "../format";
 import { Button, ButtonLink, Field, Icon, Select, StatusPill, useEscape, useFeedback, Wordmark } from "./ui";
@@ -15,7 +15,7 @@ export function PublicNav({ className = "" }: { className?: string }) {
   const links = <>
     <NavLink to="/fleet" onClick={close}>Browse Fleet</NavLink>
     <Link to="/#solutions" onClick={close}>Solutions</Link>
-    {user?.role === "ADMIN"
+    {isStaff(user)
       ? <NavLink to="/admin" onClick={close}>Staff console</NavLink>
       : <Link to="/#corporate" onClick={close}>Corporate</Link>}
     {user?.role === "CUSTOMER" && <NavLink to="/account/bookings" onClick={close}>My bookings</NavLink>}
@@ -119,7 +119,7 @@ export function BookingModal({ vehicle, trip, close, onBooked }: { vehicle: Vehi
     <form className="modal-card" role="dialog" aria-modal="true" aria-labelledby="book-title" onMouseDown={(e) => e.stopPropagation()} onSubmit={submit} noValidate>
       <div className="modal-head"><div><span className="eyebrow">Reserve &amp; book</span><h2 id="book-title">{vehicle.model}</h2><p>{plate(vehicle.plateNumber)} · {specs(vehicle)}</p></div><button type="button" onClick={close} aria-label="Close"><Icon name="close"/></button></div>
       <div className="modal-body">
-        {user?.role === "ADMIN"
+        {isStaff(user)
           ? <div className="notice"><span>i</span><p>You're signed in as staff. Issue rentals from the <Link to="/admin/contracts">staff console</Link> instead.</p></div>
           : <>
             <Select label="Pickup branch" icon="location" value={form.pickup} onChange={(pickup) => setForm({ ...form, pickup })}
@@ -140,7 +140,7 @@ export function BookingModal({ vehicle, trip, close, onBooked }: { vehicle: Vehi
       </div>
       <div className="modal-foot">
         <Button variant="outline" onClick={close}>Cancel</Button>
-        {user?.role !== "ADMIN" && <Button type="submit" busy={busy}>{user ? "Confirm booking" : "Sign in to book"} <Icon name="arrow" size={17}/></Button>}
+        {!isStaff(user) && <Button type="submit" busy={busy}>{user ? "Confirm booking" : "Sign in to book"} <Icon name="arrow" size={17}/></Button>}
       </div>
     </form>
   </div>;

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { api, errorMessage, type Customer } from "../api";
+import { useCan } from "../auth";
 import { Button, DataTable, EmptyState, ErrorBanner, Icon, Loading, RowMenu, TableFooter, useFeedback, usePaged } from "../components/ui";
 import { downloadCsv, isoDate, shortId } from "../format";
 import { AdminPageHeader, AdminSearch, matches, useAdmin } from "./AdminShell";
@@ -8,6 +9,7 @@ import { CustomerDrawer } from "./forms";
 export default function Customers() {
   const { query } = useAdmin();
   const { toast, confirm } = useFeedback();
+  const can = useCan();
   const [customers, setCustomers] = useState<Customer[] | null>(null);
   const [error, setError] = useState("");
   const [editing, setEditing] = useState<Customer | null | undefined>(undefined);
@@ -47,7 +49,7 @@ export default function Customers() {
     <AdminPageHeader title="People behind every journey." description="View and manage your customer directory.">
       <AdminSearch placeholder="Search customers…"/>
       <Button variant="outline" onClick={exportCsv} disabled={!rows.length}><Icon name="download" size={17}/> Export CSV</Button>
-      <Button onClick={() => setEditing(null)}><Icon name="plus" size={17}/> Register customer</Button>
+      {can("CUSTOMER_WRITE") && <Button onClick={() => setEditing(null)}><Icon name="plus" size={17}/> Register customer</Button>}
     </AdminPageHeader>
     {error && <ErrorBanner message={error} onRetry={load}/>}
     <section className="admin-card">
@@ -62,7 +64,7 @@ export default function Customers() {
             <td><span className="license">{c.driverLicenseNumber}</span></td>
             <td className="actions"><RowMenu actions={[
               { label: "Edit profile", onSelect: () => setEditing(c) },
-              { label: "Delete customer", onSelect: () => remove(c), danger: true },
+              ...(can("CUSTOMER_DELETE") ? [{ label: "Delete customer", onSelect: () => remove(c), danger: true }] : []),
             ]}/></td>
           </tr>)}
         </DataTable>

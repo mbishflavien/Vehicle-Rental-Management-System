@@ -213,6 +213,87 @@ class VrmsApiTest {
                 .andExpect(jsonPath("$[*].event", hasItem("New contract")));
     }
 
+    // --- RBAC & security ------------------------------------------------------------------------
+
+    @Test
+    void agentCanRunRentalsButNotDeleteOrReadAuditLog() throws Exception {
+        String agent = login("agent@test.rw", "test-agent-pass1");
+        send("GET", "/api/auth/me", agent, null)
+                .andExpect(jsonPath("$.role").value("AGENT"))
+                .andExpect(jsonPath("$.permissions", hasItem("CONTRACT_WRITE")))
+                .andExpect(jsonPath("$.permissions", not(hasItem("VEHICLE_DELETE"))));
+
+        String vehicleId = read(send("POST", "/api/vehicles", agent,
+                Map.of("plateNumber", "RAB321C", "model", "Toyota Vitz", "dailyRate", 45_000))
+                .andExpect(status().isCreated())).get("vehicleId").asText();
+        send("GET", "/api/dashboard", agent, null).andExpect(status().isOk());
+
+        send("DELETE", "/api/vehicles/" + vehicleId, agent, null).andExpect(status().isForbidden());
+        send("GET", "/api/logs", agent, null).andExpect(status().isForbidden());
+        send("GET", "/api/staff", agent, null).andExpect(status().isForbidden());
+
+        send("DELETE", "/api/vehicles/" + vehicleId, adminToken, null).andExpect(status().isNoContent());
+    }
+
+    @Test
+    void adminManagesStaffAndDisablingRevokesAccessImmediately() throws Exception {
+        String id = read(send("POST", "/api/staff", adminToken, Map.of("fullName", "Diane Mukamana",
+                "email", "diane@vrms.rw", "jobTitle", "Agent", "role", "AGENT", "password", "temp-pass-123"))
+                .andExpect(status().isCreated())).get("userId").asText();
+
+        String diane = login("diane@vrms.rw", "temp-pass-123");
+        send("GET", "/api/contracts", diane, null).andExpect(status().isOk());
+
+        send("PUT", "/api/staff/" + id, adminToken, Map.of("fullName", "Diane Mukamana",
+                "email", "diane@vrms.rw", "role", "AGENT", "enabled", false))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.enabled").value(false));
+
+        // Her still-unexpired token stops working, and she can't sign in again
+        send("GET", "/api/contracts", diane, null).andExpect(status().isUnauthorized());
+        send("POST", "/api/auth/login", null, Map.of("email", "diane@vrms.rw", "password", "temp-pass-123"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void lastAdminCannotBeDisabledOrDemoted() throws Exception {
+        String adminId = read(send("GET", "/api/auth/me", adminToken, null)).get("userId").asText();
+        send("PUT", "/api/staff/" + adminId, adminToken, Map.of("fullName", "Grace Kamanzi",
+                "email", "staff@test.rw", "role", "AGENT"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void repeatedFailedSignInsAreThrottled() throws Exception {
+        Map<String, String> wrong = Map.of("email", "staff@test.rw", "password", "wrong-password");
+        for (int i = 0; i < 3; i++) {
+            send("POST", "/api/auth/login", null, wrong).andExpect(status().isUnauthorized());
+        }
+        send("POST", "/api/auth/login", null, wrong).andExpect(status().isTooManyRequests());
+        // Even the right password is refused during the lockout
+        send("POST", "/api/auth/login", null, Map.of("email", "staff@test.rw", "password", "test-admin-pass"))
+                .andExpect(status().isTooManyRequests());
+    }
+
+    @Test
+    void tamperedOrForeignTokensAreRejected() throws Exception {
+        String[] parts = adminToken.split("\\.");
+        String tampered = parts[0] + "." + parts[1] + "x." + parts[2];
+        send("GET", "/api/auth/me", tampered, null).andExpect(status().isUnauthorized());
+        send("GET", "/api/auth/me", "not-a-jwt", null).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void customersCanChangeTheirPassword() throws Exception {
+        String token = registerCustomer("aline@email.com", "DL-48219");
+        send("PUT", "/api/auth/password", token, Map.of("currentPassword", "wrong", "newPassword", "new-pass-123"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors.currentPassword").exists());
+        send("PUT", "/api/auth/password", token, Map.of("currentPassword", "secret-pass-1", "newPassword", "new-pass-123"))
+                .andExpect(status().isNoContent());
+        login("aline@email.com", "new-pass-123");
+    }
+
     @Test
     void unknownIdsReturn404() throws Exception {
         send("GET", "/api/vehicles/" + UUID.randomUUID(), null, null)
