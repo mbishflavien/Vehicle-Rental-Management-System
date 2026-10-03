@@ -1,5 +1,6 @@
 package com.vrms.dto;
 
+import com.vrms.model.AuthProvider;
 import com.vrms.model.Permission;
 import com.vrms.model.Role;
 import com.vrms.model.User;
@@ -13,10 +14,11 @@ import java.util.UUID;
  * hide actions the user can't perform; the API enforces them regardless.
  */
 public record UserView(UUID userId, String fullName, String email, Role role, String jobTitle, UUID customerId,
-                       Set<Permission> permissions, boolean enabled, Instant lastLoginAt, Instant createdAt) {
+                       Set<Permission> permissions, boolean enabled, AuthProvider authProvider,
+                       Instant lastLoginAt, Instant createdAt) {
     public static UserView of(User user, UUID customerId) {
         return new UserView(user.getUserId(), user.getFullName(), user.getEmail(), user.getRole(),
                 user.getJobTitle(), customerId, user.getRole().getPermissions(), user.isEnabled(),
-                user.getLastLoginAt(), user.getCreatedAt());
+                user.getAuthProvider(), user.getLastLoginAt(), user.getCreatedAt());
     }
 }

@@ -1,7 +1,9 @@
 package com.vrms.service;
 
+import com.vrms.dto.ProfileRequest;
 import com.vrms.exception.ApiException;
 import com.vrms.model.Customer;
+import com.vrms.model.User;
 import com.vrms.repository.CustomerRepository;
 import com.vrms.repository.RentalContractRepository;
 import com.vrms.repository.UserRepository;
@@ -70,6 +72,44 @@ public class CustomerService {
         existing.setDriverLicenseNumber(changes.getDriverLicenseNumber());
         Customer saved = customerRepository.save(existing);
         audit.log("Customer updated", saved.getFullName() + " profile updated");
+        return saved;
+    }
+
+    /**
+     * A signed-in customer adds or updates their phone and driver license. If staff already
+     * registered them as a walk-in customer with the same email and license, that profile is linked
+     * instead of creating a duplicate (BR-01).
+     */
+    @Transactional
+    public Customer saveOwnProfile(User user, ProfileRequest req) {
+        String license = req.driverLicenseNumber().trim().toUpperCase();
+        Customer customer = customerRepository.findByUser(user).orElse(null);
+        if (customer == null) {
+            customer = customerRepository.findByEmailIgnoreCase(user.getEmail()).orElse(null);
+            if (customer != null && customer.getUser() != null) {
+                throw ApiException.conflict("This email's customer profile belongs to another account", "driverLicenseNumber");
+            }
+            if (customer != null && !customer.getDriverLicenseNumber().equals(license)) {
+                throw ApiException.conflict("This email is registered to a different driver license. Contact the VRMS team.", "driverLicenseNumber");
+            }
+            if (customer == null) {
+                customer = new Customer();
+                customer.setEmail(user.getEmail());
+                customer.setFullName(user.getFullName());
+            }
+            customer.setUser(user);
+        }
+        UUID ownId = customer.getCustomerId();
+        boolean licenseTaken = ownId == null
+                ? customerRepository.existsByDriverLicenseNumber(license) && !license.equals(customer.getDriverLicenseNumber())
+                : customerRepository.existsByDriverLicenseNumberAndCustomerIdNot(license, ownId);
+        if (licenseTaken) {
+            throw ApiException.conflict("This driver license is already registered", "driverLicenseNumber");
+        }
+        customer.setDriverLicenseNumber(license);
+        customer.setPhoneNumber(req.phoneNumber() == null || req.phoneNumber().isBlank() ? null : req.phoneNumber());
+        Customer saved = customerRepository.save(customer);
+        audit.log("Customer profile saved", user.getFullName(), "Profile completed with license " + license);
         return saved;
     }
 

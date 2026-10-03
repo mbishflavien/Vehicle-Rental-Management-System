@@ -1,5 +1,6 @@
 package com.vrms.controller;
 
+import com.vrms.config.OAuth2LoginConfig;
 import com.vrms.dto.AuthResponse;
 import com.vrms.dto.LoginRequest;
 import com.vrms.dto.PasswordChangeRequest;
@@ -15,14 +16,24 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
 
     private final AuthService authService;
+    private final OAuth2LoginConfig oauth2;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, OAuth2LoginConfig oauth2) {
         this.authService = authService;
+        this.oauth2 = oauth2;
+    }
+
+    /** OAuth2 identity providers available for "Continue with …" (start at /oauth2/authorization/{id}). */
+    @GetMapping("/providers")
+    public List<String> providers() {
+        return oauth2.providers();
     }
 
     @PostMapping("/register")

@@ -11,17 +11,22 @@ import { AuthProvider, isStaff, useAuth } from "./auth";
 import { FeedbackProvider, Loading } from "./components/ui";
 import type { Role } from "./api";
 import AuthPage from "./pages/Auth";
+import CompleteProfilePage from "./pages/CompleteProfile";
+import OAuthCallback from "./pages/OAuthCallback";
 import FleetPage from "./pages/Fleet";
 import HomePage from "./pages/Home";
 import MyBookingsPage from "./pages/MyBookings";
 
 /** Sends signed-out visitors to sign in (and back afterwards); other roles go to their own home. */
-function RequireRole({ roles, children }: { roles: Role[]; children: ReactNode }) {
+function RequireRole({ roles, children, needsProfile = false }: { roles: Role[]; children: ReactNode; needsProfile?: boolean }) {
   const { user, loading } = useAuth();
   const location = useLocation();
   if (loading) return <div className="page-loading"><Loading/></div>;
   if (!user) return <Navigate to={`/signin?next=${encodeURIComponent(location.pathname + location.search)}`} replace/>;
   if (!roles.includes(user.role)) return <Navigate to={isStaff(user) ? "/admin" : "/fleet"} replace/>;
+  if (needsProfile && user.role === "CUSTOMER" && !user.customerId) {
+    return <Navigate to={`/account/profile?next=${encodeURIComponent(location.pathname)}`} replace/>;
+  }
   return <>{children}</>;
 }
 
@@ -47,7 +52,9 @@ export default function App() {
           <Route path="/" element={<HomePage/>}/>
           <Route path="/fleet" element={<FleetPage/>}/>
           <Route path="/signin" element={<AuthPage/>}/>
-          <Route path="/account/bookings" element={<RequireRole roles={["CUSTOMER"]}><MyBookingsPage/></RequireRole>}/>
+          <Route path="/account/bookings" element={<RequireRole roles={["CUSTOMER"]} needsProfile><MyBookingsPage/></RequireRole>}/>
+          <Route path="/account/profile" element={<RequireRole roles={["CUSTOMER"]}><CompleteProfilePage/></RequireRole>}/>
+          <Route path="/oauth/callback" element={<OAuthCallback/>}/>
           <Route path="/admin" element={<RequireRole roles={["ADMIN", "AGENT"]}><AdminShell/></RequireRole>}>
             <Route index element={<Dashboard/>}/>
             <Route path="fleet" element={<Assets/>}/>

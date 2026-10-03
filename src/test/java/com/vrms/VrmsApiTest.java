@@ -294,6 +294,42 @@ class VrmsApiTest {
         login("aline@email.com", "new-pass-123");
     }
 
+    // --- OAuth2 sign-in (Google / GitHub) -------------------------------------------------------
+
+    @Autowired com.vrms.security.OAuthAccountService oauthAccounts;
+    @Autowired com.vrms.security.JwtService jwtService;
+
+    @Test
+    void oauthSignInCreatesCustomerWhoMustCompleteProfileBeforeBooking() throws Exception {
+        send("GET", "/api/auth/providers", null, null).andExpect(status().isOk());
+
+        // A walk-in customer already exists with this email and license
+        send("POST", "/api/customers", adminToken,
+                Map.of("fullName", "Aline U", "email", "aline@gmail.com", "driverLicenseNumber", "DL-48219"))
+                .andExpect(status().isCreated());
+
+        var user = oauthAccounts.findOrCreate(com.vrms.model.AuthProvider.GOOGLE, "Aline@Gmail.com", "Aline Uwase");
+        String token = jwtService.issueToken(user);
+        send("GET", "/api/auth/me", token, null)
+                .andExpect(jsonPath("$.role").value("CUSTOMER"))
+                .andExpect(jsonPath("$.authProvider").value("GOOGLE"))
+                .andExpect(jsonPath("$.customerId").doesNotExist());
+        send("GET", "/api/me/bookings", token, null).andExpect(status().isForbidden());
+
+        // Wrong license for the walk-in profile is refused; the right one links it (no duplicate)
+        send("PUT", "/api/me/profile", token, Map.of("driverLicenseNumber", "DL-99999"))
+                .andExpect(status().isConflict());
+        send("PUT", "/api/me/profile", token, Map.of("phoneNumber", "+250 788 245 610", "driverLicenseNumber", "dl-48219"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.hasAccount").value(true));
+        send("GET", "/api/customers", adminToken, null).andExpect(jsonPath("$", hasSize(1)));
+        send("GET", "/api/me/bookings", token, null).andExpect(status().isOk());
+
+        // Signing in again with the same verified email reuses the account
+        var again = oauthAccounts.findOrCreate(com.vrms.model.AuthProvider.GOOGLE, "aline@gmail.com", "Aline Uwase");
+        org.junit.jupiter.api.Assertions.assertEquals(user.getUserId(), again.getUserId());
+    }
+
     @Test
     void unknownIdsReturn404() throws Exception {
         send("GET", "/api/vehicles/" + UUID.randomUUID(), null, null)

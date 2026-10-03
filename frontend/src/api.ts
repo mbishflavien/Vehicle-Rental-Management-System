@@ -21,6 +21,7 @@ export interface UserView {
   customerId: string | null;
   permissions: Permission[];
   enabled: boolean;
+  authProvider: "LOCAL" | "GOOGLE" | "GITHUB";
   lastLoginAt: string | null;
   createdAt: string | null;
 }
@@ -172,6 +173,9 @@ export const api = {
   register: (body: { fullName: string; email: string; phoneNumber: string; driverLicenseNumber: string; password: string }) =>
     request<AuthResponse>("POST", "/auth/register", body),
   me: () => request<UserView>("GET", "/auth/me"),
+  providers: () => request<string[]>("GET", "/auth/providers"),
+  myProfile: () => request<Customer>("GET", "/me/profile"),
+  saveMyProfile: (body: { phoneNumber: string; driverLicenseNumber: string }) => request<Customer>("PUT", "/me/profile", body),
   changePassword: (currentPassword: string, newPassword: string) =>
     request<void>("PUT", "/auth/password", { currentPassword, newPassword }),
 

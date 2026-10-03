@@ -421,6 +421,12 @@ tbody tr:nth-last-child(-n+2):not(:nth-child(-n+2)) .row-menu-list { top: auto; 
 .field-check { display: flex; align-items: center; gap: 10px; font-size: 13px; margin-bottom: 18px; cursor: pointer; }
 .field-check input { width: 18px; height: 18px; accent-color: var(--terracotta); }
 
+.divider { display: flex; align-items: center; gap: 12px; margin: 22px 0 14px; color: #a99a8e; font-size: 11px; text-transform: uppercase; letter-spacing: .12em; }
+.divider:before, .divider:after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.oauth-buttons { display: flex; flex-direction: column; gap: 10px; }
+.oauth-button { min-height: 46px; display: flex; align-items: center; justify-content: center; gap: 10px; border: 1px solid #d8ccbf; border-radius: 999px; background: white; font-size: 14px; font-weight: 600; cursor: pointer; color: var(--espresso); transition: .2s; }
+.oauth-button:hover { border-color: var(--espresso); }
+
 /* Loading placeholders */
 .vehicle-card.skeleton { height: 470px; background: linear-gradient(100deg, #f4ede4 30%, #faf6f0 50%, #f4ede4 70%); background-size: 200% 100%; animation: shimmer 1.4s infinite; }
 @keyframes shimmer { to { background-position: -200% 0; } }

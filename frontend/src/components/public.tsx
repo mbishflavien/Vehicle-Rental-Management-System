@@ -19,6 +19,7 @@ export function PublicNav({ className = "" }: { className?: string }) {
       ? <NavLink to="/admin" onClick={close}>Staff console</NavLink>
       : <Link to="/#corporate" onClick={close}>Corporate</Link>}
     {user?.role === "CUSTOMER" && <NavLink to="/account/bookings" onClick={close}>My bookings</NavLink>}
+    {user?.role === "CUSTOMER" && <NavLink to="/account/profile" onClick={close}>Profile</NavLink>}
     {user
       ? <button onClick={() => { close(); signOut(); navigate("/"); }}>Sign out</button>
       : <NavLink to="/signin" onClick={close}>Sign In</NavLink>}
@@ -90,9 +91,13 @@ export function BookingModal({ vehicle, trip, close, onBooked }: { vehicle: Vehi
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
+    const back = `${location.pathname}?book=${vehicle.vehicleId}&start=${form.start}&end=${form.end}&pickup=${encodeURIComponent(form.pickup)}`;
     if (!user) {
-      const back = `${location.pathname}?book=${vehicle.vehicleId}&start=${form.start}&end=${form.end}&pickup=${encodeURIComponent(form.pickup)}`;
       navigate(`/signin?next=${encodeURIComponent(back)}`);
+      return;
+    }
+    if (!user.customerId) {
+      navigate(`/account/profile?next=${encodeURIComponent(back)}`);
       return;
     }
     const local: Record<string, string> = {};

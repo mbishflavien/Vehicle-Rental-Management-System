@@ -33,8 +33,12 @@ public class User {
     private String jobTitle;
 
     /** Disabled accounts can't sign in, and their existing tokens stop working immediately. */
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "boolean default true")
     private boolean enabled = true;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20, columnDefinition = "varchar(20) default 'LOCAL'")
+    private AuthProvider authProvider = AuthProvider.LOCAL;
 
     private Instant lastLoginAt;
 
@@ -57,6 +61,8 @@ public class User {
     public void setRole(Role role) { this.role = role; }
     public String getJobTitle() { return jobTitle; }
     public void setJobTitle(String jobTitle) { this.jobTitle = jobTitle; }
+    public AuthProvider getAuthProvider() { return authProvider; }
+    public void setAuthProvider(AuthProvider authProvider) { this.authProvider = authProvider; }
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
     public Instant getLastLoginAt() { return lastLoginAt; }

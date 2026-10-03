@@ -6,6 +6,10 @@ interface AuthState {
   /** True until the stored token has been checked against /api/auth/me. */
   loading: boolean;
   signIn: (res: AuthResponse) => void;
+  /** Stores a token received from the OAuth2 callback and loads its user. */
+  signInWithToken: (token: string) => Promise<UserView>;
+  /** Re-reads the signed-in user, e.g. after completing the profile. */
+  refresh: () => Promise<void>;
   signOut: () => void;
 }
 
@@ -25,6 +29,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(res.user);
   }, []);
 
+  const signInWithToken = useCallback(async (token: string) => {
+    tokenStore.set(token);
+    try {
+      const me = await api.me();
+      setUser(me);
+      return me;
+    } catch (e) {
+      tokenStore.set(null);
+      throw e;
+    }
+  }, []);
+
+  const refresh = useCallback(async () => { setUser(await api.me()); }, []);
+
   useEffect(() => {
     setUnauthorizedHandler(signOut);
     if (!tokenStore.get()) return;
@@ -34,7 +52,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false));
   }, [signOut]);
 
-  const value = useMemo(() => ({ user, loading, signIn, signOut }), [user, loading, signIn, signOut]);
+  const value = useMemo(() => ({ user, loading, signIn, signInWithToken, refresh, signOut }),
+    [user, loading, signIn, signInWithToken, refresh, signOut]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
