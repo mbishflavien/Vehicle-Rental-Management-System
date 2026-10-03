@@ -5,6 +5,7 @@ import com.vrms.model.ContractStatus;
 import com.vrms.model.Customer;
 import com.vrms.model.RentalContract;
 import com.vrms.model.Vehicle;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -17,7 +18,11 @@ import java.util.UUID;
 
 @Repository
 public interface RentalContractRepository extends JpaRepository<RentalContract, UUID> {
+    /** Loads each contract with its customer, vehicle, branches and staff in one query (no N+1). */
+    @EntityGraph(attributePaths = {"customer", "vehicle", "vehicle.branch", "pickupBranch", "issuedBy"})
     List<RentalContract> findAllByOrderByCreatedAtDesc();
+
+    @EntityGraph(attributePaths = {"customer", "vehicle", "vehicle.branch", "pickupBranch", "issuedBy"})
     List<RentalContract> findByCustomerOrderByCreatedAtDesc(Customer customer);
     List<RentalContract> findByVehicle(Vehicle vehicle);
     List<RentalContract> findByCustomer(Customer customer);

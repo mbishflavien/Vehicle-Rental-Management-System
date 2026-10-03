@@ -1,14 +1,16 @@
-import { useEffect, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, type ReactNode } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
-import AdminShell from "./admin/AdminShell";
-import Assets from "./admin/Assets";
-import Contracts from "./admin/Contracts";
-import Customers from "./admin/Customers";
-import Dashboard from "./admin/Dashboard";
-import Logs from "./admin/Logs";
-import Notifications from "./admin/Notifications";
-import Staff from "./admin/Staff";
 import { AuthProvider, isStaff, useAuth } from "./auth";
+
+// The staff console is only downloaded when someone opens it, keeping the public site light.
+const AdminShell = lazy(() => import("./admin/AdminShell"));
+const Assets = lazy(() => import("./admin/Assets"));
+const Contracts = lazy(() => import("./admin/Contracts"));
+const Customers = lazy(() => import("./admin/Customers"));
+const Dashboard = lazy(() => import("./admin/Dashboard"));
+const Logs = lazy(() => import("./admin/Logs"));
+const Notifications = lazy(() => import("./admin/Notifications"));
+const Staff = lazy(() => import("./admin/Staff"));
 import { FeedbackProvider, Loading } from "./components/ui";
 import type { Role } from "./api";
 import AuthPage from "./pages/Auth";
@@ -49,6 +51,7 @@ export default function App() {
     <AuthProvider>
       <FeedbackProvider>
         <ScrollManager/>
+        <Suspense fallback={<div className="page-loading"><Loading/></div>}>
         <Routes>
           <Route path="/" element={<HomePage/>}/>
           <Route path="/fleet" element={<FleetPage/>}/>
@@ -67,6 +70,7 @@ export default function App() {
           </Route>
           <Route path="*" element={<Navigate to="/" replace/>}/>
         </Routes>
+        </Suspense>
       </FeedbackProvider>
     </AuthProvider>
   </BrowserRouter>;

@@ -1,5 +1,6 @@
 package com.vrms.service;
 
+import com.vrms.config.CacheConfig;
 import com.vrms.dto.BookingRequest;
 import com.vrms.dto.ContractRequest;
 import com.vrms.exception.ApiException;
@@ -11,6 +12,7 @@ import com.vrms.repository.RentalContractRepository;
 import com.vrms.repository.VehicleRepository;
 import com.vrms.security.CurrentUser;
 import org.springframework.http.HttpStatus;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -73,6 +75,7 @@ public class ContractService {
 
     /** Staff "Issue new contract": the vehicle is handed over now, so the contract starts ACTIVE. */
     @Transactional
+    @CacheEvict(cacheNames = {CacheConfig.FLEET, CacheConfig.DASHBOARD}, allEntries = true)
     public RentalContract issue(ContractRequest req) {
         Customer customer = customerRepository.findById(req.customerId())
                 .orElseThrow(() -> ApiException.notFound("Customer"));
@@ -88,6 +91,7 @@ public class ContractService {
 
     /** Customer "Reserve & book": held as PENDING until staff approve it. */
     @Transactional
+    @CacheEvict(cacheNames = {CacheConfig.FLEET, CacheConfig.DASHBOARD}, allEntries = true)
     public RentalContract book(Customer customer, BookingRequest req) {
         RentalContract contract = open(customer, req.vehicleId(), req.startDate(), req.endDate(),
                 req.pickupBranchId(), ContractStatus.PENDING, true);
@@ -98,6 +102,7 @@ public class ContractService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = {CacheConfig.FLEET, CacheConfig.DASHBOARD}, allEntries = true)
     public RentalContract changeStatus(UUID id, ContractStatus target) {
         RentalContract contract = getById(id);
         ContractStatus current = contract.getContractStatus();
@@ -133,6 +138,7 @@ public class ContractService {
 
     /** A customer may cancel their own booking while it is still pending. */
     @Transactional
+    @CacheEvict(cacheNames = {CacheConfig.FLEET, CacheConfig.DASHBOARD}, allEntries = true)
     public RentalContract cancelOwnBooking(Customer customer, UUID id) {
         RentalContract contract = getById(id);
         if (!contract.getCustomer().getCustomerId().equals(customer.getCustomerId())) {
@@ -146,6 +152,7 @@ public class ContractService {
 
     /** Deleting an open contract releases its vehicle first. */
     @Transactional
+    @CacheEvict(cacheNames = {CacheConfig.FLEET, CacheConfig.DASHBOARD}, allEntries = true)
     public void delete(UUID id) {
         RentalContract contract = getById(id);
         if (VehicleService.OPEN.contains(contract.getContractStatus())) {

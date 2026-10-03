@@ -1,5 +1,6 @@
 package com.vrms.service;
 
+import com.vrms.config.CacheConfig;
 import com.vrms.exception.ApiException;
 import com.vrms.model.ContractStatus;
 import com.vrms.model.Vehicle;
@@ -8,6 +9,8 @@ import com.vrms.repository.RentalContractRepository;
 import com.vrms.repository.VehicleRepository;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,8 +36,9 @@ public class VehicleService {
         this.audit = audit;
     }
 
+    @Cacheable(CacheConfig.FLEET)
     public List<Vehicle> getAll() {
-        return vehicleRepository.findAll(Sort.by("model", "plateNumber"));
+        return List.copyOf(vehicleRepository.findAllBy(Sort.by("model", "plateNumber")));
     }
 
     public Vehicle getById(UUID id) {
@@ -42,6 +46,7 @@ public class VehicleService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = {CacheConfig.FLEET, CacheConfig.DASHBOARD}, allEntries = true)
     public Vehicle create(Vehicle vehicle) {
         vehicle.setVehicleId(null);
         if (vehicleRepository.existsByPlateNumber(vehicle.getPlateNumber())) {
@@ -58,6 +63,7 @@ public class VehicleService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = {CacheConfig.FLEET, CacheConfig.DASHBOARD}, allEntries = true)
     public Vehicle update(UUID id, Vehicle changes) {
         Vehicle existing = getById(id);
         if (vehicleRepository.existsByPlateNumberAndVehicleIdNot(changes.getPlateNumber(), id)) {
@@ -100,6 +106,7 @@ public class VehicleService {
      * contract history is removed with it.
      */
     @Transactional
+    @CacheEvict(cacheNames = {CacheConfig.FLEET, CacheConfig.DASHBOARD}, allEntries = true)
     public void delete(UUID id) {
         Vehicle vehicle = getById(id);
         if (contractRepository.existsByVehicleAndContractStatusIn(vehicle, OPEN)) {

@@ -1,11 +1,14 @@
 package com.vrms.service;
 
+import com.vrms.config.CacheConfig;
 import com.vrms.exception.ApiException;
 import com.vrms.model.Branch;
 import com.vrms.repository.BranchRepository;
 import com.vrms.repository.RentalContractRepository;
 import com.vrms.repository.VehicleRepository;
 import org.springframework.data.domain.Sort;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,8 +31,9 @@ public class BranchService {
         this.audit = audit;
     }
 
+    @Cacheable(CacheConfig.BRANCHES)
     public List<Branch> getAll() {
-        return branchRepository.findAll(Sort.by("city", "name"));
+        return List.copyOf(branchRepository.findAll(Sort.by("city", "name")));
     }
 
     public Branch getById(UUID id) {
@@ -42,6 +46,7 @@ public class BranchService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = {CacheConfig.BRANCHES, CacheConfig.FLEET}, allEntries = true)
     public Branch create(Branch branch) {
         branch.setBranchId(null);
         if (branchRepository.existsByNameIgnoreCase(branch.getName())) {
@@ -53,6 +58,7 @@ public class BranchService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = {CacheConfig.BRANCHES, CacheConfig.FLEET}, allEntries = true)
     public Branch update(UUID id, Branch changes) {
         Branch existing = getById(id);
         if (branchRepository.existsByNameIgnoreCaseAndBranchIdNot(changes.getName(), id)) {
@@ -67,6 +73,7 @@ public class BranchService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = {CacheConfig.BRANCHES, CacheConfig.FLEET}, allEntries = true)
     public void delete(UUID id) {
         Branch branch = getById(id);
         if (vehicleRepository.existsByBranch(branch) || contractRepository.existsByPickupBranch(branch)) {

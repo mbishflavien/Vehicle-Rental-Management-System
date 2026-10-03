@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { NotificationPreview } from "../admin/Notifications";
 import { api, errorMessage, type Contract, type Notification } from "../api";
 import { useAuth } from "../auth";
 import { ChangePasswordModal } from "../components/account";
+import { NotificationPreview } from "../components/notifications";
 import { Footer, PublicNav } from "../components/public";
 import { Button, ButtonLink, EmptyState, ErrorBanner, Icon, Loading, StatusPill, useFeedback } from "../components/ui";
 import { daysBetween, period, plate, relativeTime, rwf, shortId, vehicleImage } from "../format";

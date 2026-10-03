@@ -1,6 +1,10 @@
 package com.vrms;
 
+import org.springframework.boot.autoconfigure.flyway.FlywayMigrationStrategy;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -16,7 +20,20 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  */
 @Testcontainers
 @ActiveProfiles("test")
+@Import(IntegrationTest.CleanDatabase.class)
 public abstract class IntegrationTest {
+
+    /** Every new test context starts from an empty database, built by the real Flyway migrations. */
+    @TestConfiguration(proxyBeanMethods = false)
+    static class CleanDatabase {
+        @Bean
+        FlywayMigrationStrategy cleanThenMigrate() {
+            return flyway -> {
+                flyway.clean();
+                flyway.migrate();
+            };
+        }
+    }
 
     @ServiceConnection
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
