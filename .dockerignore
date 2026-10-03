@@ -7,4 +7,4 @@ frontend/dist
 .env
 src/main/resources/application-secrets.properties
 docs
-*.md
+
