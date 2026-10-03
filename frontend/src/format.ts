@@ -113,6 +113,12 @@ export function greeting(): string {
 export const initials = (name: string) =>
   name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join("");
 
+export const documentTypeLabel = (t: string) =>
+  ({ DRIVER_LICENSE: "Driver license", NATIONAL_ID: "National ID", PASSPORT: "Passport", OTHER: "Other document" } as Record<string, string>)[t] ?? t;
+
+export const fileSize = (bytes: number) =>
+  bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
+
 // --- CSV -----------------------------------------------------------------------------------------
 
 export function downloadCsv(filename: string, headers: string[], rows: (string | number | null | undefined)[][]) {

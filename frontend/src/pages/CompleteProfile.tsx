@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api, ApiError } from "../api";
 import { useAuth } from "../auth";
+import { DocumentsPanel } from "../components/documents";
 import { PublicNav } from "../components/public";
 import { Button, Field, Icon, useFeedback } from "../components/ui";
 import { images } from "../format";
@@ -57,6 +58,7 @@ export default function CompleteProfilePage() {
           {errors.form && <p className="form-error" role="alert">{errors.form}</p>}
           <Button type="submit" className="full" busy={busy}>Save and continue <Icon name="arrow" size={17}/></Button>
         </form>
+        {user?.customerId && <DocumentsPanel/>}
       </div>
     </div>
   </div>;

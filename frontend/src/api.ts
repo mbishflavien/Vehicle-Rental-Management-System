@@ -92,6 +92,24 @@ export interface Contract {
   createdAt: string;
 }
 
+export type DocumentType = "DRIVER_LICENSE" | "NATIONAL_ID" | "PASSPORT" | "OTHER";
+export type DocumentStatus = "PENDING" | "VERIFIED" | "REJECTED";
+
+export interface CustomerDocument {
+  documentId: string;
+  customerId: string;
+  type: DocumentType;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  status: DocumentStatus;
+  uploadedBy: string;
+  uploadedAt: string;
+  reviewedBy: string | null;
+  reviewedAt: string | null;
+  reviewNote: string | null;
+}
+
 export interface AuditLog {
   logId: string;
   timestamp: string;
@@ -150,11 +168,12 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   const headers: Record<string, string> = {};
   const token = tokenStore.get();
   if (token) headers.Authorization = `Bearer ${token}`;
-  if (body !== undefined) headers["Content-Type"] = "application/json";
+  const isForm = body instanceof FormData;
+  if (body !== undefined && !isForm) headers["Content-Type"] = "application/json";
 
   let res: Response;
   try {
-    res = await fetch(`/api${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+    res = await fetch(`/api${path}`, { method, headers, body: body === undefined ? undefined : isForm ? body : JSON.stringify(body) });
   } catch {
     throw new ApiError(0, "Can't reach the VRMS server. Check that the backend is running.");
   }
@@ -207,9 +226,28 @@ export const api = {
     request<Contract>("POST", "/me/bookings", body),
   cancelBooking: (id: string) => request<Contract>("POST", `/me/bookings/${id}/cancel`),
 
+  myDocuments: () => request<CustomerDocument[]>("GET", "/me/documents"),
+  uploadMyDocument: (type: DocumentType, file: File) => {
+    const form = new FormData();
+    form.append("type", type);
+    form.append("file", file);
+    return request<CustomerDocument>("POST", "/me/documents", form);
+  },
+  deleteMyDocument: (id: string) => request<void>("DELETE", `/me/documents/${id}`),
+  customerDocuments: (customerId: string) => request<CustomerDocument[]>("GET", `/customers/${customerId}/documents`),
+  reviewDocument: (id: string, status: DocumentStatus, note?: string) => request<CustomerDocument>("PATCH", `/documents/${id}/review`, { status, note }),
+
   dashboard: () => request<DashboardStats>("GET", "/dashboard"),
   logs: (limit = 500) => request<AuditLog[]>("GET", `/logs?limit=${limit}`),
 };
+
+/** Downloads a protected file (sent with the bearer token) and returns a temporary object URL. */
+export async function fetchFileUrl(path: string): Promise<string> {
+  const token = tokenStore.get();
+  const res = await fetch(`/api${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  if (!res.ok) throw new ApiError(res.status, "The file could not be opened");
+  return URL.createObjectURL(await res.blob());
+}
 
 /** Message for a caught error, whatever threw it. */
 export function errorMessage(e: unknown): string {

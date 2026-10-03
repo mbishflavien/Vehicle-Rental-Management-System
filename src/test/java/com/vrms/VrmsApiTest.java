@@ -23,7 +23,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
-class VrmsApiTest {
+class VrmsApiTest extends IntegrationTest {
 
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
@@ -328,6 +328,53 @@ class VrmsApiTest {
         // Signing in again with the same verified email reuses the account
         var again = oauthAccounts.findOrCreate(com.vrms.model.AuthProvider.GOOGLE, "aline@gmail.com", "Aline Uwase");
         org.junit.jupiter.api.Assertions.assertEquals(user.getUserId(), again.getUserId());
+    }
+
+    // --- MongoDB: audit trail and customer documents (GridFS) ----------------------------------------
+
+    static final byte[] PNG = {(byte) 0x89, 'P', 'N', 'G', 13, 10, 26, 10, 0, 0, 0, 13};
+
+    ResultActions upload(String token, String type, String name, byte[] bytes) throws Exception {
+        return mvc.perform(multipart("/api/me/documents")
+                .file(new org.springframework.mock.web.MockMultipartFile("file", name, "image/png", bytes))
+                .param("type", type)
+                .header("Authorization", "Bearer " + token));
+    }
+
+    @Test
+    void customerUploadsLicenseScanAndStaffVerifiesIt() throws Exception {
+        String customer = registerCustomer("aline@email.com", "DL-48219");
+        String customerId = read(send("GET", "/api/auth/me", customer, null)).get("customerId").asText();
+
+        // Content is checked by its bytes, not by the name or declared type
+        upload(customer, "DRIVER_LICENSE", "license.png", "<script>alert(1)</script>".getBytes())
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors.file").value("Upload a PDF, JPEG or PNG file"));
+
+        String docId = read(upload(customer, "DRIVER_LICENSE", "license.png", PNG)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("PENDING"))
+                .andExpect(jsonPath("$.contentType").value("image/png"))
+                .andExpect(jsonPath("$.fileId").doesNotExist())).get("documentId").asText();
+
+        mvc.perform(get("/api/documents/" + docId + "/content").header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(content().bytes(PNG));
+
+        // Another customer can't see it
+        String other = registerCustomer("eric@email.com", "DL-19385");
+        send("GET", "/api/me/documents/" + docId + "/content", other, null).andExpect(status().isNotFound());
+
+        send("PATCH", "/api/documents/" + docId + "/review", adminToken, Map.of("status", "VERIFIED"))
+                .andExpect(jsonPath("$.status").value("VERIFIED"))
+                .andExpect(jsonPath("$.reviewedBy").value("Grace Kamanzi"));
+        send("GET", "/api/customers/" + customerId + "/documents", adminToken, null)
+                .andExpect(jsonPath("$", hasSize(1)));
+        send("DELETE", "/api/me/documents/" + docId, customer, null).andExpect(status().isBadRequest());
+
+        // Every step was written to the MongoDB audit trail
+        send("GET", "/api/logs", adminToken, null)
+                .andExpect(jsonPath("$[*].event", hasItems("Document uploaded", "Document reviewed")));
     }
 
     @Test

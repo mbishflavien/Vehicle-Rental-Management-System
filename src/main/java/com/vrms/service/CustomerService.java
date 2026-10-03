@@ -20,13 +20,15 @@ public class CustomerService {
     private final CustomerRepository customerRepository;
     private final RentalContractRepository contractRepository;
     private final UserRepository userRepository;
+    private final DocumentService documentService;
     private final AuditService audit;
 
     public CustomerService(CustomerRepository customerRepository, RentalContractRepository contractRepository,
-                           UserRepository userRepository, AuditService audit) {
+                           UserRepository userRepository, DocumentService documentService, AuditService audit) {
         this.customerRepository = customerRepository;
         this.contractRepository = contractRepository;
         this.userRepository = userRepository;
+        this.documentService = documentService;
         this.audit = audit;
     }
 
@@ -115,7 +117,7 @@ public class CustomerService {
 
     /**
      * Deletes a customer (BR-06). Refused while they have an open booking or rental; otherwise their
-     * closed contract history and their login account (if any) are removed with them.
+     * closed contract history, uploaded documents and login account (if any) are removed with them.
      */
     @Transactional
     public void delete(UUID id) {
@@ -125,6 +127,7 @@ public class CustomerService {
         }
         contractRepository.deleteAll(contractRepository.findByCustomer(customer));
         customerRepository.delete(customer);
+        documentService.deleteAllFor(customer.getCustomerId());
         if (customer.getUser() != null) {
             userRepository.delete(customer.getUser());
         }

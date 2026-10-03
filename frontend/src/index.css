@@ -103,6 +103,8 @@ img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .status i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 .status-available, .status-completed { color: #587445; background: var(--sage-soft); }
 .status-rented, .status-active, .status-pending, .status-reserved { color: #a86529; background: var(--amber-soft); }
+.status-verified { color: #587445; background: var(--sage-soft); }
+.status-rejected { color: #9e4837; background: var(--brick-soft); }
 .status-maintenance, .status-cancelled { color: #9e4837; background: var(--brick-soft); }
 .quote-band { background: var(--deep); color: #fff8ef; padding: 125px 32px; background-image: radial-gradient(circle at 15% 20%, rgba(217,154,78,.11), transparent 30%); }
 .quote-inner { max-width: 880px; margin: auto; text-align: center; }
@@ -426,6 +428,24 @@ tbody tr:nth-last-child(-n+2):not(:nth-child(-n+2)) .row-menu-list { top: auto; 
 .oauth-buttons { display: flex; flex-direction: column; gap: 10px; }
 .oauth-button { min-height: 46px; display: flex; align-items: center; justify-content: center; gap: 10px; border: 1px solid #d8ccbf; border-radius: 999px; background: white; font-size: 14px; font-weight: 600; cursor: pointer; color: var(--espresso); transition: .2s; }
 .oauth-button:hover { border-color: var(--espresso); }
+
+/* Documents */
+.docs-panel { width: min(460px, 100%); margin-top: 18px; background: var(--white); border: 1px solid var(--line); border-radius: 18px; padding: 26px 28px; box-shadow: var(--shadow-soft); }
+.docs-panel h2 { font: 24px var(--serif); margin: 0 0 4px; }
+.docs-panel > p { color: var(--taupe); font-size: 13px; margin: 0 0 18px; }
+.upload-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end; margin-bottom: 8px; }
+.file-pick { display: flex; align-items: center; gap: 10px; border: 1px dashed #cdbfb1; border-radius: 12px; padding: 12px 14px; cursor: pointer; font-size: 13px; color: var(--taupe); margin-bottom: 14px; }
+.file-pick:hover { border-color: var(--terracotta); color: var(--terracotta-dark); }
+.file-pick input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.doc-list { list-style: none; padding: 0; margin: 14px 0 0; display: flex; flex-direction: column; gap: 8px; }
+.doc-item { display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; align-items: center; border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: #fffdf9; }
+.doc-item strong { font-size: 13px; }
+.doc-item small { color: var(--taupe); font-size: 11px; display: block; margin-top: 3px; }
+.doc-actions { display: flex; gap: 6px; flex-wrap: wrap; grid-column: 1 / -1; }
+.doc-actions button { border: 1px solid var(--line); background: white; border-radius: 99px; padding: 6px 12px; font-size: 11px; cursor: pointer; color: var(--espresso); }
+.doc-actions button:hover { border-color: var(--terracotta); color: var(--terracotta-dark); }
+.doc-actions button.danger { color: var(--danger); }
+.doc-note { grid-column: 1 / -1; font-size: 11px; color: var(--taupe); }
 
 /* Loading placeholders */
 .vehicle-card.skeleton { height: 470px; background: linear-gradient(100deg, #f4ede4 30%, #faf6f0 50%, #f4ede4 70%); background-size: 200% 100%; animation: shimmer 1.4s infinite; }

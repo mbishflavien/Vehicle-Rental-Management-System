@@ -4,6 +4,7 @@ import { useCan } from "../auth";
 import { Button, DataTable, EmptyState, ErrorBanner, Icon, Loading, RowMenu, TableFooter, useFeedback, usePaged } from "../components/ui";
 import { downloadCsv, isoDate, shortId } from "../format";
 import { AdminPageHeader, AdminSearch, matches, useAdmin } from "./AdminShell";
+import { CustomerDocumentsDrawer } from "../components/documents";
 import { CustomerDrawer } from "./forms";
 
 export default function Customers() {
@@ -13,6 +14,7 @@ export default function Customers() {
   const [customers, setCustomers] = useState<Customer[] | null>(null);
   const [error, setError] = useState("");
   const [editing, setEditing] = useState<Customer | null | undefined>(undefined);
+  const [docsFor, setDocsFor] = useState<Customer | null>(null);
 
   const load = () => {
     setError("");
@@ -63,7 +65,8 @@ export default function Customers() {
             <td>{c.phoneNumber || <span className="muted">—</span>}</td>
             <td><span className="license">{c.driverLicenseNumber}</span></td>
             <td className="actions"><RowMenu actions={[
-              { label: "Edit profile", onSelect: () => setEditing(c) },
+              ...(can("DOCUMENT_READ") ? [{ label: "Documents", onSelect: () => setDocsFor(c) }] : []),
+              ...(can("CUSTOMER_WRITE") ? [{ label: "Edit profile", onSelect: () => setEditing(c) }] : []),
               ...(can("CUSTOMER_DELETE") ? [{ label: "Delete customer", onSelect: () => remove(c), danger: true }] : []),
             ]}/></td>
           </tr>)}
@@ -71,6 +74,7 @@ export default function Customers() {
         <TableFooter shown={paged.slice.length} total={rows.length} noun="customers" {...paged}/>
       </>}
     </section>
+    {docsFor && <CustomerDocumentsDrawer customer={docsFor} canReview={can("CUSTOMER_WRITE")} close={() => setDocsFor(null)}/>}
     {editing !== undefined && <CustomerDrawer customer={editing} close={() => setEditing(undefined)} saved={() => { setEditing(undefined); load(); }}/>}
   </>;
 }
