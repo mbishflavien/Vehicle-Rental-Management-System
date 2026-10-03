@@ -48,7 +48,9 @@ export default function CompleteProfilePage() {
   return <div className="auth-page">
     <PublicNav/>
     <div className="auth-layout">
-      <div className="auth-image" style={{ backgroundImage: `url(${images.road})` }}><div><span className="eyebrow light">Almost there</span><h2>One last detail.</h2><p>We need your driver license before handing over the keys.</p></div></div>
+      <div className="auth-image" style={{ backgroundImage: `url(${images.road})` }}><div>{user?.customerId
+        ? <><span className="eyebrow light">Your profile</span><h2>Ready when you are.</h2><p>Keep your details current so pickup takes minutes.</p></>
+        : <><span className="eyebrow light">Almost there</span><h2>One last detail.</h2><p>We need your driver license before handing over the keys.</p></>}</div></div>
       <div className="auth-panel">
         <form className="auth-card" onSubmit={submit} noValidate>
           <h1>{user?.customerId ? "Your details." : `Welcome, ${user?.fullName.split(" ")[0] ?? ""}.`}</h1>

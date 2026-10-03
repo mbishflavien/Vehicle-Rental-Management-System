@@ -50,7 +50,7 @@ export default function HomePage() {
       <div className="hero-overlay"/>
       <div className="hero-content">
         <span className="eyebrow light">Rwanda, ready when you are</span>
-        <h1>Enterprise &amp; personal<br/>vehicle rentals in Rwanda.</h1>
+        <h1>Enterprise &amp; personal{" "}<br/>vehicle rentals in Rwanda.</h1>
         <p>Thoughtful mobility for everyday journeys, business travel, and the road less taken.</p>
       </div>
       <div className="scroll-hint"><span/>Explore the journey</div>
