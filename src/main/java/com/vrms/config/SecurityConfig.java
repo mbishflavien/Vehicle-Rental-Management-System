@@ -50,12 +50,12 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Public: sign in / register, and browsing the fleet
                 .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/vehicles", "/api/vehicles/*").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/vehicles", "/api/vehicles/*", "/api/branches").permitAll()
                 // Signed-in customers: their own profile and bookings
                 .requestMatchers("/api/auth/me").authenticated()
                 .requestMatchers("/api/me/**").hasRole("CUSTOMER")
                 // Staff console
-                .requestMatchers("/api/vehicles/**", "/api/customers/**", "/api/contracts/**",
+                .requestMatchers("/api/vehicles/**", "/api/customers/**", "/api/contracts/**", "/api/branches/**",
                                  "/api/dashboard/**", "/api/logs/**").hasRole("ADMIN")
                 .requestMatchers("/api/**").denyAll()
                 // Everything else is the React app (index.html, JS, CSS)

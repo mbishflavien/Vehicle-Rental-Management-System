@@ -42,13 +42,15 @@ public class ContractService {
     private final RentalContractRepository contractRepository;
     private final VehicleRepository vehicleRepository;
     private final CustomerRepository customerRepository;
+    private final BranchService branchService;
     private final AuditService audit;
 
     public ContractService(RentalContractRepository contractRepository, VehicleRepository vehicleRepository,
-                           CustomerRepository customerRepository, AuditService audit) {
+                           CustomerRepository customerRepository, BranchService branchService, AuditService audit) {
         this.contractRepository = contractRepository;
         this.vehicleRepository = vehicleRepository;
         this.customerRepository = customerRepository;
+        this.branchService = branchService;
         this.audit = audit;
     }
 
@@ -70,7 +72,7 @@ public class ContractService {
         Customer customer = customerRepository.findById(req.customerId())
                 .orElseThrow(() -> ApiException.notFound("Customer"));
         RentalContract contract = open(customer, req.vehicleId(), req.startDate(), req.endDate(),
-                req.pickupLocation(), ContractStatus.ACTIVE, false);
+                req.pickupBranchId(), ContractStatus.ACTIVE, false);
         CurrentUser.get().ifPresent(contract::setIssuedBy);
         audit.logContract("New contract", contract,
                 "Contract issued to " + customer.getFullName() + " for " + contract.getVehicle().getPlateNumber());
@@ -82,7 +84,7 @@ public class ContractService {
     @Transactional
     public RentalContract book(Customer customer, BookingRequest req) {
         RentalContract contract = open(customer, req.vehicleId(), req.startDate(), req.endDate(),
-                req.pickupLocation(), ContractStatus.PENDING, true);
+                req.pickupBranchId(), ContractStatus.PENDING, true);
         audit.logContract("Booking request", contract,
                 customer.getFullName() + " requested " + contract.getVehicle().getPlateNumber() + " online");
         return contract;
@@ -153,7 +155,7 @@ public class ContractService {
     }
 
     private RentalContract open(Customer customer, UUID vehicleId, LocalDate start, LocalDate end,
-                                String pickupLocation, ContractStatus status, boolean onlineBooking) {
+                                UUID pickupBranchId, ContractStatus status, boolean onlineBooking) {
         if (!end.isAfter(start)) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Return date must be after the start date", "endDate");
         }
@@ -177,7 +179,7 @@ public class ContractService {
         contract.setVehicle(vehicle);
         contract.setStartDate(start);
         contract.setEndDate(end);
-        contract.setPickupLocation(pickupLocation == null || pickupLocation.isBlank() ? null : pickupLocation.trim());
+        contract.setPickupBranch(pickupBranchId == null ? vehicle.getBranch() : branchService.getById(pickupBranchId));
         contract.setTotalCost(rentalDays(start, end) * vehicle.getDailyRate());
         contract.setContractStatus(status);
 

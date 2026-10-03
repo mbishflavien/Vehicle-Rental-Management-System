@@ -1,5 +1,6 @@
 package com.vrms.repository;
 
+import com.vrms.model.Branch;
 import com.vrms.model.Vehicle;
 import com.vrms.model.VehicleStatus;
 import jakarta.persistence.LockModeType;
@@ -23,4 +24,5 @@ public interface VehicleRepository extends JpaRepository<Vehicle, UUID> {
     boolean existsByPlateNumber(String plateNumber);
     boolean existsByPlateNumberAndVehicleIdNot(String plateNumber, UUID vehicleId);
     long countByVehicleStatus(VehicleStatus status);
+    boolean existsByBranch(Branch branch);
 }

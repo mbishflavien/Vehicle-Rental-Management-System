@@ -22,12 +22,12 @@ export default function Assets() {
 
   const rows = useMemo(() => (vehicles ?? []).filter((v) =>
     (!category || v.category === category) && (!status || v.vehicleStatus === status) &&
-    matches(query, v.model, v.plateNumber, shortId("VEH", v.vehicleId))), [vehicles, category, status, query]);
+    matches(query, v.model, v.plateNumber, v.branch?.name, shortId("VEH", v.vehicleId))), [vehicles, category, status, query]);
   const paged = usePaged(rows, 10);
 
   const setVehicleStatus = async (v: Vehicle, next: "AVAILABLE" | "MAINTENANCE") => {
     try {
-      await api.updateVehicle(v.vehicleId, { ...v, vehicleStatus: next });
+      await api.updateVehicle(v.vehicleId, { ...v, branchId: v.branch?.branchId ?? null, vehicleStatus: next });
       toast(`${plate(v.plateNumber)} is now ${label(next).toLowerCase()}`);
       load();
       refreshCounts();
@@ -67,13 +67,14 @@ export default function Assets() {
     {error && <ErrorBanner message={error} onRetry={load}/>}
     <section className="admin-card">
       {vehicles === null && !error ? <Loading/> : <>
-        <DataTable headers={["Vehicle ID", "Plate number", "Model", "Category", "Daily rate", "Status", ""]}
+        <DataTable headers={["Vehicle ID", "Plate number", "Model", "Category", "Branch", "Daily rate", "Status", ""]}
           empty={rows.length === 0 && <EmptyState title={vehicles?.length ? "No vehicles match" : "No vehicles yet"} text={vehicles?.length ? "Try a different search or filter." : "Add your first vehicle to start renting."}/>}>
           {paged.slice.map((v) => <tr key={v.vehicleId}>
             <td className="muted">{shortId("VEH", v.vehicleId)}</td>
             <td><span className="plate">{plate(v.plateNumber)}</span></td>
             <td><strong>{v.model}</strong></td>
             <td>{label(v.category)}</td>
+            <td>{v.branch?.name ?? <span className="muted">—</span>}</td>
             <td><strong>{rwf(v.dailyRate)}</strong></td>
             <td><StatusPill status={v.vehicleStatus}/></td>
             <td className="actions"><RowMenu actions={[

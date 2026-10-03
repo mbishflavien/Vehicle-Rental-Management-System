@@ -23,6 +23,14 @@ export interface AuthResponse {
   user: UserView;
 }
 
+export interface Branch {
+  branchId: string;
+  name: string;
+  city: string;
+  address: string | null;
+  phoneNumber: string | null;
+}
+
 export interface Vehicle {
   vehicleId: string;
   plateNumber: string;
@@ -34,10 +42,11 @@ export interface Vehicle {
   fuelType: FuelType | null;
   seats: number | null;
   imageUrl: string | null;
+  branch: Branch | null;
   createdAt: string;
 }
 
-export type VehicleInput = Omit<Vehicle, "vehicleId" | "createdAt">;
+export type VehicleInput = Omit<Vehicle, "vehicleId" | "createdAt" | "branch"> & { branchId: string | null };
 
 export interface Customer {
   customerId: string;
@@ -57,7 +66,7 @@ export interface Contract {
   endDate: string;
   totalCost: number;
   contractStatus: ContractStatus;
-  pickupLocation: string | null;
+  pickupBranch: Branch | null;
   customer: Customer;
   vehicle: Vehicle;
   issuedByName: string | null;
@@ -146,6 +155,8 @@ export const api = {
     request<AuthResponse>("POST", "/auth/register", body),
   me: () => request<UserView>("GET", "/auth/me"),
 
+  branches: () => request<Branch[]>("GET", "/branches"),
+
   vehicles: () => request<Vehicle[]>("GET", "/vehicles"),
   vehicle: (id: string) => request<Vehicle>("GET", `/vehicles/${id}`),
   createVehicle: (v: VehicleInput) => request<Vehicle>("POST", "/vehicles", v),
@@ -158,13 +169,13 @@ export const api = {
   deleteCustomer: (id: string) => request<void>("DELETE", `/customers/${id}`),
 
   contracts: () => request<Contract[]>("GET", "/contracts"),
-  issueContract: (body: { customerId: string; vehicleId: string; startDate: string; endDate: string; pickupLocation?: string }) =>
+  issueContract: (body: { customerId: string; vehicleId: string; startDate: string; endDate: string; pickupBranchId?: string }) =>
     request<Contract>("POST", "/contracts", body),
   setContractStatus: (id: string, status: ContractStatus) => request<Contract>("PATCH", `/contracts/${id}/status`, { status }),
   deleteContract: (id: string) => request<void>("DELETE", `/contracts/${id}`),
 
   myBookings: () => request<Contract[]>("GET", "/me/bookings"),
-  book: (body: { vehicleId: string; startDate: string; endDate: string; pickupLocation?: string }) =>
+  book: (body: { vehicleId: string; startDate: string; endDate: string; pickupBranchId?: string }) =>
     request<Contract>("POST", "/me/bookings", body),
   cancelBooking: (id: string) => request<Contract>("POST", `/me/bookings/${id}/cancel`),
 

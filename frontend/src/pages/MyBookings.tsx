@@ -48,7 +48,7 @@ export default function MyBookingsPage() {
           <p className="muted">{shortId("CTR", b.contractId)} · <span className="plate">{plate(b.vehicle.plateNumber)}</span></p>
           <dl>
             <div><dt>Rental period</dt><dd>{period(b.startDate, b.endDate)} · {daysBetween(b.startDate, b.endDate)} days</dd></div>
-            <div><dt>Pickup</dt><dd>{b.pickupLocation ?? "To be confirmed"}</dd></div>
+            <div><dt>Pickup</dt><dd>{b.pickupBranch?.name ?? "To be confirmed"}</dd></div>
             <div><dt>Total</dt><dd><strong>{rwf(b.totalCost)}</strong></dd></div>
           </dl>
           {b.contractStatus === "PENDING" && <div className="booking-actions"><span className="muted">Waiting for confirmation from the VRMS team.</span><Button variant="outline" onClick={() => cancel(b)}>Cancel booking</Button></div>}

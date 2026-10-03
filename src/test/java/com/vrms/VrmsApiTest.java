@@ -149,8 +149,7 @@ class VrmsApiTest {
         LocalDate start = LocalDate.now().plusDays(1);
 
         JsonNode booking = read(send("POST", "/api/me/bookings", customerToken, Map.of(
-                "vehicleId", vehicleId, "startDate", start.toString(), "endDate", start.plusDays(5).toString(),
-                "pickupLocation", "Kigali Central"))
+                "vehicleId", vehicleId, "startDate", start.toString(), "endDate", start.plusDays(5).toString()))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.contractStatus").value("PENDING"))
                 .andExpect(jsonPath("$.totalCost").value(425_000.0)));

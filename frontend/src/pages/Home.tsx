@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { api, type Vehicle } from "../api";
 import { BookingModal, defaultTrip, Footer, PublicNav, VehicleCard } from "../components/public";
 import { Button, ButtonLink, Field, Icon, Select } from "../components/ui";
-import { addDays, CATEGORIES, images, label, PICKUP_LOCATIONS, today } from "../format";
+import { branchOptions, useBranches } from "../branches";
+import { addDays, CATEGORIES, images, label, today } from "../format";
 
 const faqs = [
   ["What do I need to book a vehicle?", "A valid driver license, national ID or passport, and a payment method. International visitors may use a recognized international driving permit."],
@@ -16,13 +17,15 @@ function SearchCard() {
   const navigate = useNavigate();
   const [trip, setTrip] = useState(defaultTrip);
   const [type, setType] = useState("");
+  const branches = useBranches();
   const search = () => {
-    const q = new URLSearchParams({ pickup: trip.pickup, start: trip.start, end: trip.end });
+    const q = new URLSearchParams({ start: trip.start, end: trip.end });
+    if (trip.pickup) q.set("pickup", trip.pickup);
     if (type) q.set("type", type);
     navigate(`/fleet?${q}`);
   };
   return <form className="search-card" onSubmit={(e) => { e.preventDefault(); search(); }}>
-    <Select label="Pickup location" icon="location" value={trip.pickup} onChange={(pickup) => setTrip({ ...trip, pickup })} options={PICKUP_LOCATIONS.map((l) => ({ value: l, label: l }))}/>
+    <Select label="Pickup location" icon="location" value={trip.pickup} onChange={(pickup) => setTrip({ ...trip, pickup })} options={[{ value: "", label: "Any branch" }, ...branchOptions(branches)]}/>
     <Field label="Start date" type="date" min={today()} value={trip.start}
       onChange={(e) => { const start = e.target.value; setTrip({ ...trip, start, end: trip.end <= start ? addDays(start, 1) : trip.end }); }}/>
     <Field label="End date" type="date" min={addDays(trip.start, 1)} value={trip.end} onChange={(e) => setTrip({ ...trip, end: e.target.value })}/>

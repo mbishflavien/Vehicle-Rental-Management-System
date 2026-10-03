@@ -15,15 +15,6 @@ export function vehicleImage(v: Vehicle): string {
   return v.imageUrl || (v.category ? categoryImage[v.category] : images.hero);
 }
 
-export const PICKUP_LOCATIONS = [
-  "Kigali Central",
-  "Kigali International Airport",
-  "Kimihurura",
-  "Musanze",
-  "Rubavu",
-  "Huye",
-];
-
 export const CATEGORIES: VehicleCategory[] = ["SUV", "SEDAN", "HATCHBACK", "VAN", "COMMERCIAL"];
 
 const nf = new Intl.NumberFormat("en-US");

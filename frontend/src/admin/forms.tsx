@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { api, ApiError, type Customer, type CustomerInput, type Vehicle, type VehicleInput } from "../api";
 import { Button, Field, Icon, Select, useEscape, useFeedback } from "../components/ui";
-import { addDays, CATEGORIES, label, PICKUP_LOCATIONS, plate, rwf, today } from "../format";
+import { branchOptions, useBranches } from "../branches";
+import { addDays, CATEGORIES, label, plate, rwf, today } from "../format";
 
 function Drawer({ eyebrow, title, description, close, onSubmit, busy, submitLabel, children, formError }: {
   eyebrow: string; title: string; description: string; close: () => void; onSubmit: () => void;
@@ -52,6 +53,7 @@ export function VehicleDrawer({ vehicle, close, saved }: { vehicle: Vehicle | nu
   const { toast } = useFeedback();
   const editing = vehicle !== null;
   const locked = vehicle?.vehicleStatus === "RENTED" || vehicle?.vehicleStatus === "RESERVED";
+  const branches = useBranches();
   const f = useForm({
     plateNumber: vehicle ? plate(vehicle.plateNumber) : "",
     model: vehicle?.model ?? "",
@@ -62,6 +64,7 @@ export function VehicleDrawer({ vehicle, close, saved }: { vehicle: Vehicle | nu
     fuelType: vehicle?.fuelType ?? "PETROL",
     seats: vehicle?.seats ? String(vehicle.seats) : "5",
     imageUrl: vehicle?.imageUrl ?? "",
+    branchId: vehicle?.branch?.branchId ?? "",
   });
   const v = f.values;
   const set = (key: keyof typeof v) => (value: string) => f.setValues({ ...v, [key]: value });
@@ -81,6 +84,7 @@ export function VehicleDrawer({ vehicle, close, saved }: { vehicle: Vehicle | nu
       plateNumber: normalized, model: v.model.trim(), dailyRate: rate, category: v.category as VehicleInput["category"],
       vehicleStatus: v.vehicleStatus as VehicleInput["vehicleStatus"], transmission: v.transmission as VehicleInput["transmission"],
       fuelType: v.fuelType as VehicleInput["fuelType"], seats, imageUrl: v.imageUrl.trim() || null,
+      branchId: v.branchId || null,
     };
     f.run(local, async () => {
       const result = editing ? await api.updateVehicle(vehicle.vehicleId, body) : await api.createVehicle(body);
@@ -109,6 +113,7 @@ export function VehicleDrawer({ vehicle, close, saved }: { vehicle: Vehicle | nu
       <Field label="Seats" type="number" min={1} max={60} value={v.seats} onChange={(e) => set("seats")(e.target.value)} error={f.errors.seats}/>
       <Select label={editing ? "Status" : "Initial status"} value={v.vehicleStatus} onChange={set("vehicleStatus")} options={statusOptions} error={f.errors.vehicleStatus}/>
     </div>
+    <Select label="Home branch" icon="location" value={v.branchId} onChange={set("branchId")} options={[{ value: "", label: "Not assigned" }, ...branchOptions(branches)]}/>
     <Field label="Photo URL (optional)" placeholder="https://…" value={v.imageUrl} onChange={(e) => set("imageUrl")(e.target.value)} error={f.errors.imageUrl} hint="Leave empty to use a photo for the category."/>
   </Drawer>;
 }
@@ -156,7 +161,8 @@ export function ContractModal({ close, issued }: { close: () => void; issued: ()
   const [customers, setCustomers] = useState<Customer[] | null>(null);
   const [vehicles, setVehicles] = useState<Vehicle[] | null>(null);
   const [loadError, setLoadError] = useState("");
-  const f = useForm({ customerId: "", vehicleId: "", startDate: today(), days: "5", pickupLocation: PICKUP_LOCATIONS[0] });
+  const branches = useBranches();
+  const f = useForm({ customerId: "", vehicleId: "", startDate: today(), days: "5", pickupBranchId: "" });
   const v = f.values;
   useEscape(useCallback(close, [close]));
 
@@ -183,7 +189,7 @@ export function ContractModal({ close, issued }: { close: () => void; issued: ()
     if (!v.startDate) local.startDate = "Start date is required";
     if (!Number.isInteger(days) || days < 1 || days > 90) local.endDate = "Rental days must be between 1 and 90";
     f.run(local, async () => {
-      const c = await api.issueContract({ customerId: v.customerId, vehicleId: v.vehicleId, startDate: v.startDate, endDate: addDays(v.startDate, days), pickupLocation: v.pickupLocation });
+      const c = await api.issueContract({ customerId: v.customerId, vehicleId: v.vehicleId, startDate: v.startDate, endDate: addDays(v.startDate, days), pickupBranchId: v.pickupBranchId || undefined });
       toast(`Contract issued to ${c.customer.fullName}. ${plate(c.vehicle.plateNumber)} is now rented.`);
       issued();
     });
@@ -205,7 +211,8 @@ export function ContractModal({ close, issued }: { close: () => void; issued: ()
           <Field label="Rental days" type="number" min={1} max={90} value={v.days} onChange={(e) => f.setValues({ ...v, days: e.target.value })} error={f.errors.endDate}
             hint={days > 0 && v.startDate ? `Return on ${addDays(v.startDate, days)}` : undefined}/>
         </div>
-        <Select label="Pickup location" icon="location" value={v.pickupLocation} onChange={(pickupLocation) => f.setValues({ ...v, pickupLocation })} options={PICKUP_LOCATIONS.map((l) => ({ value: l, label: l }))}/>
+        <Select label="Pickup branch" icon="location" value={v.pickupBranchId} onChange={(pickupBranchId) => f.setValues({ ...v, pickupBranchId })}
+          options={[{ value: "", label: vehicle?.branch ? `Vehicle's home branch (${vehicle.branch.name})` : "Vehicle's home branch" }, ...branchOptions(branches)]}/>
         <div className="calculation"><div><span>Live calculation</span><small>{days > 0 ? days : 0} day{days === 1 ? "" : "s"} × {rwf(vehicle?.dailyRate ?? 0)}</small></div><strong>{rwf(total)}</strong></div>
         {f.formError && <p className="form-error" role="alert">{f.formError}</p>}
         <div className="notice"><span>i</span><p>Executing this contract will update the vehicle status from <strong>Available</strong> to <strong>Rented</strong>.</p></div>

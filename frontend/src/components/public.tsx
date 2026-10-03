@@ -2,7 +2,8 @@ import { useCallback, useMemo, useState, type FormEvent } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { api, ApiError, type Vehicle } from "../api";
 import { useAuth } from "../auth";
-import { addDays, daysBetween, label, PICKUP_LOCATIONS, plate, rwf, specs, today, vehicleImage } from "../format";
+import { branchOptions, useBranches } from "../branches";
+import { addDays, daysBetween, label, plate, rwf, specs, today, vehicleImage } from "../format";
 import { Button, ButtonLink, Field, Icon, Select, StatusPill, useEscape, useFeedback, Wordmark } from "./ui";
 
 export function PublicNav({ className = "" }: { className?: string }) {
@@ -54,7 +55,7 @@ export function VehicleCard({ vehicle, onReserve }: { vehicle: Vehicle; onReserv
     <div className="vehicle-image"><img src={vehicleImage(vehicle)} alt={`${vehicle.model}`} loading="lazy"/>{vehicle.category && <span className="image-tag">{label(vehicle.category)}</span>}</div>
     <div className="vehicle-body">
       <div className="vehicle-title"><h3>{vehicle.model}</h3><span className="plate">{plate(vehicle.plateNumber)}</span></div>
-      <p>{specs(vehicle)}</p>
+      <p>{specs(vehicle)}{vehicle.branch && <> · <span className="branch-tag"><Icon name="location" size={13}/>{vehicle.branch.name}</span></>}</p>
       <div className="vehicle-meta"><div><strong>{rwf(vehicle.dailyRate)}</strong><small>/ day</small></div><StatusPill status={vehicle.vehicleStatus}/></div>
       <Button className="full" disabled={!available} onClick={() => onReserve(vehicle)}>
         {available ? <>Reserve &amp; book <Icon name="arrow" size={17}/></> : "Currently unavailable"}
@@ -63,11 +64,12 @@ export function VehicleCard({ vehicle, onReserve }: { vehicle: Vehicle; onReserv
   </article>;
 }
 
+/** pickup is a branch id, or "" for any branch. */
 export interface TripPrefs { pickup: string; start: string; end: string }
 
 export function defaultTrip(): TripPrefs {
   const start = addDays(today(), 1);
-  return { pickup: PICKUP_LOCATIONS[0], start, end: addDays(start, 5) };
+  return { pickup: "", start, end: addDays(start, 5) };
 }
 
 /** "Reserve & book" for customers. Signed-out visitors are sent to sign in and brought back. */
@@ -76,7 +78,8 @@ export function BookingModal({ vehicle, trip, close, onBooked }: { vehicle: Vehi
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useFeedback();
-  const [form, setForm] = useState(trip);
+  const branches = useBranches();
+  const [form, setForm] = useState({ ...trip, pickup: trip.pickup || vehicle.branch?.branchId || "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -101,7 +104,7 @@ export function BookingModal({ vehicle, trip, close, onBooked }: { vehicle: Vehi
     setBusy(true);
     setFormError("");
     try {
-      await api.book({ vehicleId: vehicle.vehicleId, startDate: form.start, endDate: form.end, pickupLocation: form.pickup });
+      await api.book({ vehicleId: vehicle.vehicleId, startDate: form.start, endDate: form.end, pickupBranchId: form.pickup || undefined });
       toast(`${vehicle.model} reserved. The VRMS team will confirm shortly.`);
       onBooked();
       navigate("/account/bookings");
@@ -119,7 +122,9 @@ export function BookingModal({ vehicle, trip, close, onBooked }: { vehicle: Vehi
         {user?.role === "ADMIN"
           ? <div className="notice"><span>i</span><p>You're signed in as staff. Issue rentals from the <Link to="/admin/contracts">staff console</Link> instead.</p></div>
           : <>
-            <Select label="Pickup location" icon="location" value={form.pickup} onChange={(pickup) => setForm({ ...form, pickup })} options={PICKUP_LOCATIONS.map((l) => ({ value: l, label: l }))}/>
+            <Select label="Pickup branch" icon="location" value={form.pickup} onChange={(pickup) => setForm({ ...form, pickup })}
+              placeholder={branches.length ? undefined : "Loading branches…"} options={branchOptions(branches)}
+              hint={vehicle.branch && form.pickup && form.pickup !== vehicle.branch.branchId ? `This vehicle is based at ${vehicle.branch.name}; we'll bring it to you.` : undefined}/>
             <div className="field-row">
               <Field label="Start date" type="date" min={today()} value={form.start} error={errors.startDate}
                 onChange={(e) => { const start = e.target.value; setForm({ ...form, start, end: form.end <= start ? addDays(start, 1) : form.end }); }}/>

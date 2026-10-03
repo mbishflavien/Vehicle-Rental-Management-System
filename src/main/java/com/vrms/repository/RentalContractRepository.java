@@ -1,5 +1,6 @@
 package com.vrms.repository;
 
+import com.vrms.model.Branch;
 import com.vrms.model.ContractStatus;
 import com.vrms.model.Customer;
 import com.vrms.model.RentalContract;
@@ -21,6 +22,7 @@ public interface RentalContractRepository extends JpaRepository<RentalContract, 
     List<RentalContract> findByVehicle(Vehicle vehicle);
     List<RentalContract> findByCustomer(Customer customer);
     long countByContractStatus(ContractStatus status);
+    boolean existsByPickupBranch(Branch branch);
     boolean existsByVehicleAndContractStatusIn(Vehicle vehicle, Collection<ContractStatus> statuses);
     boolean existsByCustomerAndContractStatusIn(Customer customer, Collection<ContractStatus> statuses);
 

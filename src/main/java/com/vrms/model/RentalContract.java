@@ -10,7 +10,11 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 @Entity
-@Table(name = "rental_contracts")
+@Table(name = "rental_contracts", indexes = {
+        @Index(name = "idx_contracts_status", columnList = "contract_status"),
+        @Index(name = "idx_contracts_created_at", columnList = "created_at"),
+        @Index(name = "idx_contracts_customer", columnList = "customer_id"),
+        @Index(name = "idx_contracts_vehicle", columnList = "vehicle_id")})
 public class RentalContract {
 
     @Id
@@ -30,7 +34,9 @@ public class RentalContract {
     @Enumerated(EnumType.STRING)
     private ContractStatus contractStatus = ContractStatus.PENDING;
 
-    private String pickupLocation;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "pickup_branch_id")
+    private Branch pickupBranch;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "customer_id", nullable = false)
@@ -63,8 +69,8 @@ public class RentalContract {
     public void setTotalCost(Double totalCost) { this.totalCost = totalCost; }
     public ContractStatus getContractStatus() { return contractStatus; }
     public void setContractStatus(ContractStatus contractStatus) { this.contractStatus = contractStatus; }
-    public String getPickupLocation() { return pickupLocation; }
-    public void setPickupLocation(String pickupLocation) { this.pickupLocation = pickupLocation; }
+    public Branch getPickupBranch() { return pickupBranch; }
+    public void setPickupBranch(Branch pickupBranch) { this.pickupBranch = pickupBranch; }
     public Customer getCustomer() { return customer; }
     public void setCustomer(Customer customer) { this.customer = customer; }
     public Vehicle getVehicle() { return vehicle; }

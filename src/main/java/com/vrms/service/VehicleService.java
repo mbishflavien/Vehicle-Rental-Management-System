@@ -22,12 +22,14 @@ public class VehicleService {
 
     private final VehicleRepository vehicleRepository;
     private final RentalContractRepository contractRepository;
+    private final BranchService branchService;
     private final AuditService audit;
 
     public VehicleService(VehicleRepository vehicleRepository, RentalContractRepository contractRepository,
-                          AuditService audit) {
+                          BranchService branchService, AuditService audit) {
         this.vehicleRepository = vehicleRepository;
         this.contractRepository = contractRepository;
+        this.branchService = branchService;
         this.audit = audit;
     }
 
@@ -49,6 +51,7 @@ public class VehicleService {
         if (vehicle.getVehicleStatus() != VehicleStatus.MAINTENANCE) {
             vehicle.setVehicleStatus(VehicleStatus.AVAILABLE);
         }
+        vehicle.setBranch(branchService.resolve(vehicle.getBranchId()));
         Vehicle saved = vehicleRepository.save(vehicle);
         audit.log("Vehicle added", saved.getModel() + " (" + saved.getPlateNumber() + ") added to the fleet");
         return saved;
@@ -81,6 +84,7 @@ public class VehicleService {
         existing.setFuelType(changes.getFuelType());
         existing.setSeats(changes.getSeats());
         existing.setImageUrl(changes.getImageUrl());
+        existing.setBranch(branchService.resolve(changes.getBranchId()));
         existing.setVehicleStatus(requested);
         Vehicle saved = vehicleRepository.save(existing);
 

@@ -409,6 +409,9 @@ tbody tr:nth-last-child(-n+2):not(:nth-child(-n+2)) .row-menu-list { top: auto; 
 .mobile-panel .nav-user { align-self: flex-start; margin: 6px 14px; }
 .mobile-panel .button { margin-top: 6px; }
 
+.branch-tag { display: inline-flex; align-items: center; gap: 3px; }
+.branch-tag .icon { color: var(--terracotta); }
+
 /* Loading placeholders */
 .vehicle-card.skeleton { height: 470px; background: linear-gradient(100deg, #f4ede4 30%, #faf6f0 50%, #f4ede4 70%); background-size: 200% 100%; animation: shimmer 1.4s infinite; }
 @keyframes shimmer { to { background-position: -200% 0; } }

@@ -100,7 +100,7 @@ export default function Contracts() {
             <td><strong>{shortId("CTR", c.contractId)}</strong><small className="subcell">{c.issuedByName ? `by ${c.issuedByName}` : "Online booking"}</small></td>
             <td><strong>{c.customer.fullName}</strong><small className="subcell">{c.customer.driverLicenseNumber}</small></td>
             <td><strong>{c.vehicle.model}</strong><small className="subcell">{plate(c.vehicle.plateNumber)}</small></td>
-            <td>{period(c.startDate, c.endDate)}{c.pickupLocation && <small className="subcell">{c.pickupLocation}</small>}</td>
+            <td>{period(c.startDate, c.endDate)}{c.pickupBranch && <small className="subcell">{c.pickupBranch.name}</small>}</td>
             <td><strong>{rwf(c.totalCost)}</strong></td>
             <td><StatusPill status={c.contractStatus}/></td>
             <td className="actions"><RowMenu actions={actions(c)}/></td>
