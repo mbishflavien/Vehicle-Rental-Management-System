@@ -6,6 +6,8 @@ import com.vrms.dto.PasswordChangeRequest;
 import com.vrms.dto.RegisterRequest;
 import com.vrms.dto.UserView;
 import com.vrms.exception.ApiException;
+import com.vrms.messaging.RentalEvent;
+import com.vrms.messaging.RentalEventPublisher;
 import com.vrms.model.Customer;
 import com.vrms.model.Role;
 import com.vrms.model.User;
@@ -30,16 +32,18 @@ public class AuthService {
     private final JwtService jwtService;
     private final LoginAttemptService loginAttempts;
     private final AuditService audit;
+    private final RentalEventPublisher events;
 
     public AuthService(UserRepository userRepository, CustomerRepository customerRepository,
                        PasswordEncoder passwordEncoder, JwtService jwtService,
-                       LoginAttemptService loginAttempts, AuditService audit) {
+                       LoginAttemptService loginAttempts, AuditService audit, RentalEventPublisher events) {
         this.userRepository = userRepository;
         this.customerRepository = customerRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.loginAttempts = loginAttempts;
         this.audit = audit;
+        this.events = events;
     }
 
     /**
@@ -85,6 +89,8 @@ public class AuthService {
         customer = customerRepository.save(customer);
 
         audit.log("Account created", user.getFullName(), "Customer registered online with " + email);
+        events.customer(RentalEvent.Type.CUSTOMER_REGISTERED, customer.getCustomerId(), user.getFullName(), email,
+                customer.getPhoneNumber(), null);
         return response(user, customer.getCustomerId());
     }
 

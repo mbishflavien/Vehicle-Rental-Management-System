@@ -110,6 +110,22 @@ export interface CustomerDocument {
   reviewNote: string | null;
 }
 
+export interface Notification {
+  notificationId: string;
+  createdAt: string;
+  eventId: string;
+  eventType: string;
+  channel: "EMAIL" | "SMS";
+  recipient: string;
+  subject: string | null;
+  body: string;
+  status: "SENT" | "SIMULATED" | "FAILED";
+  provider: string;
+  error: string | null;
+  customerId: string | null;
+  contractId: string | null;
+}
+
 export interface AuditLog {
   logId: string;
   timestamp: string;
@@ -236,6 +252,9 @@ export const api = {
   deleteMyDocument: (id: string) => request<void>("DELETE", `/me/documents/${id}`),
   customerDocuments: (customerId: string) => request<CustomerDocument[]>("GET", `/customers/${customerId}/documents`),
   reviewDocument: (id: string, status: DocumentStatus, note?: string) => request<CustomerDocument>("PATCH", `/documents/${id}/review`, { status, note }),
+
+  notifications: (limit = 300) => request<Notification[]>("GET", `/notifications?limit=${limit}`),
+  myNotifications: () => request<Notification[]>("GET", "/me/notifications"),
 
   dashboard: () => request<DashboardStats>("GET", "/dashboard"),
   logs: (limit = 500) => request<AuditLog[]>("GET", `/logs?limit=${limit}`),

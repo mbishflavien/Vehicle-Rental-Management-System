@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { api, errorMessage, type Contract } from "../api";
+import { NotificationPreview } from "../admin/Notifications";
+import { api, errorMessage, type Contract, type Notification } from "../api";
 import { useAuth } from "../auth";
 import { ChangePasswordModal } from "../components/account";
 import { Footer, PublicNav } from "../components/public";
 import { Button, ButtonLink, EmptyState, ErrorBanner, Icon, Loading, StatusPill, useFeedback } from "../components/ui";
-import { daysBetween, period, plate, rwf, shortId, vehicleImage } from "../format";
+import { daysBetween, period, plate, relativeTime, rwf, shortId, vehicleImage } from "../format";
 
 export default function MyBookingsPage() {
   const { user } = useAuth();
@@ -12,10 +13,13 @@ export default function MyBookingsPage() {
   const [bookings, setBookings] = useState<Contract[] | null>(null);
   const [error, setError] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
+  const [messages, setMessages] = useState<Notification[]>([]);
+  const [openMessage, setOpenMessage] = useState<Notification | null>(null);
 
   const load = () => {
     setError("");
     api.myBookings().then(setBookings).catch((e) => setError(errorMessage(e)));
+    api.myNotifications().then(setMessages).catch(() => {});
   };
   useEffect(load, []);
 
@@ -56,8 +60,16 @@ export default function MyBookingsPage() {
           {b.contractStatus === "PENDING" && <div className="booking-actions"><span className="muted">Waiting for confirmation from the VRMS team.</span><Button variant="outline" onClick={() => cancel(b)}>Cancel booking</Button></div>}
         </div>
       </article>)}
+      {messages.length > 0 && <section className="messages">
+        <h2>Messages from VRMS</h2>
+        <ul>{messages.slice(0, 8).map((m) => <li key={m.notificationId}><button onClick={() => setOpenMessage(m)}>
+          <Icon name={m.channel === "EMAIL" ? "mail" : "phone"} size={16}/>
+          <span><strong>{m.subject ?? m.body}</strong><small>{m.channel === "EMAIL" ? "Email" : "SMS"} to {m.recipient} · {relativeTime(m.createdAt)}</small></span>
+        </button></li>)}</ul>
+      </section>}
     </main>
     <Footer/>
+    {openMessage && <NotificationPreview n={openMessage} close={() => setOpenMessage(null)}/>}
     {changingPassword && <ChangePasswordModal close={() => setChangingPassword(false)}/>}
   </div>;
 }

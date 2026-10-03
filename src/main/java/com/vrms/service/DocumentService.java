@@ -2,9 +2,12 @@ package com.vrms.service;
 
 import com.mongodb.client.gridfs.model.GridFSFile;
 import com.vrms.exception.ApiException;
+import com.vrms.messaging.RentalEvent;
+import com.vrms.messaging.RentalEventPublisher;
 import com.vrms.model.Customer;
 import com.vrms.model.CustomerDocument;
 import com.vrms.repository.CustomerDocumentRepository;
+import com.vrms.repository.CustomerRepository;
 import com.vrms.security.CurrentUser;
 import org.bson.Document;
 import org.bson.types.ObjectId;
@@ -39,11 +42,16 @@ public class DocumentService {
     private final CustomerDocumentRepository repository;
     private final GridFsTemplate gridFs;
     private final AuditService audit;
+    private final CustomerRepository customers;
+    private final RentalEventPublisher events;
 
-    public DocumentService(CustomerDocumentRepository repository, GridFsTemplate gridFs, AuditService audit) {
+    public DocumentService(CustomerDocumentRepository repository, GridFsTemplate gridFs, AuditService audit,
+                           CustomerRepository customers, RentalEventPublisher events) {
         this.repository = repository;
         this.gridFs = gridFs;
         this.audit = audit;
+        this.customers = customers;
+        this.events = events;
     }
 
     public List<CustomerDocument> forCustomer(UUID customerId) {
@@ -112,6 +120,9 @@ public class DocumentService {
         doc.setReviewedAt(Instant.now());
         CustomerDocument saved = repository.save(doc);
         audit.log("Document reviewed", pretty(doc.getType()) + " marked " + status.name().toLowerCase());
+        customers.findById(doc.getCustomerId()).ifPresent(c -> events.customer(
+                status == CustomerDocument.Status.VERIFIED ? RentalEvent.Type.DOCUMENT_VERIFIED : RentalEvent.Type.DOCUMENT_REJECTED,
+                c.getCustomerId(), c.getFullName(), c.getEmail(), c.getPhoneNumber(), pretty(doc.getType()).toLowerCase()));
         return saved;
     }
 

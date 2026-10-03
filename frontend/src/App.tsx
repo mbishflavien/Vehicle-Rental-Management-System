@@ -6,6 +6,7 @@ import Contracts from "./admin/Contracts";
 import Customers from "./admin/Customers";
 import Dashboard from "./admin/Dashboard";
 import Logs from "./admin/Logs";
+import Notifications from "./admin/Notifications";
 import Staff from "./admin/Staff";
 import { AuthProvider, isStaff, useAuth } from "./auth";
 import { FeedbackProvider, Loading } from "./components/ui";
@@ -61,6 +62,7 @@ export default function App() {
             <Route path="customers" element={<Customers/>}/>
             <Route path="contracts" element={<Contracts/>}/>
             <Route path="logs" element={<Logs/>}/>
+            <Route path="notifications" element={<Notifications/>}/>
             <Route path="staff" element={<Staff/>}/>
           </Route>
           <Route path="*" element={<Navigate to="/" replace/>}/>

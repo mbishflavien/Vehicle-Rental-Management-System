@@ -3,6 +3,8 @@ package com.vrms.service;
 import com.vrms.dto.BookingRequest;
 import com.vrms.dto.ContractRequest;
 import com.vrms.exception.ApiException;
+import com.vrms.messaging.RentalEvent;
+import com.vrms.messaging.RentalEventPublisher;
 import com.vrms.model.*;
 import com.vrms.repository.CustomerRepository;
 import com.vrms.repository.RentalContractRepository;
@@ -44,14 +46,17 @@ public class ContractService {
     private final CustomerRepository customerRepository;
     private final BranchService branchService;
     private final AuditService audit;
+    private final RentalEventPublisher events;
 
     public ContractService(RentalContractRepository contractRepository, VehicleRepository vehicleRepository,
-                           CustomerRepository customerRepository, BranchService branchService, AuditService audit) {
+                           CustomerRepository customerRepository, BranchService branchService, AuditService audit,
+                           RentalEventPublisher events) {
         this.contractRepository = contractRepository;
         this.vehicleRepository = vehicleRepository;
         this.customerRepository = customerRepository;
         this.branchService = branchService;
         this.audit = audit;
+        this.events = events;
     }
 
     public List<RentalContract> getAll() {
@@ -77,6 +82,7 @@ public class ContractService {
         audit.logContract("New contract", contract,
                 "Contract issued to " + customer.getFullName() + " for " + contract.getVehicle().getPlateNumber());
         audit.log("Vehicle status", contract.getVehicle().getPlateNumber() + " changed to Rented");
+        events.contract(RentalEvent.Type.CONTRACT_ISSUED, contract);
         return contract;
     }
 
@@ -87,6 +93,7 @@ public class ContractService {
                 req.pickupBranchId(), ContractStatus.PENDING, true);
         audit.logContract("Booking request", contract,
                 customer.getFullName() + " requested " + contract.getVehicle().getPlateNumber() + " online");
+        events.contract(RentalEvent.Type.BOOKING_REQUESTED, contract);
         return contract;
     }
 
@@ -120,6 +127,7 @@ public class ContractService {
         audit.logContract(event, saved, "Contract for " + saved.getCustomer().getFullName() + " marked "
                 + VehicleService.pretty(target).toLowerCase());
         audit.log("Vehicle status", vehicle.getPlateNumber() + " changed to " + VehicleService.pretty(vehicleStatus));
+        events.statusChanged(saved, target);
         return saved;
     }
 

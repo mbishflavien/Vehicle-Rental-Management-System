@@ -1,6 +1,8 @@
 package com.vrms.security;
 
 import com.vrms.exception.ApiException;
+import com.vrms.messaging.RentalEvent;
+import com.vrms.messaging.RentalEventPublisher;
 import com.vrms.model.AuthProvider;
 import com.vrms.model.Role;
 import com.vrms.model.User;
@@ -28,11 +30,14 @@ public class OAuthAccountService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuditService audit;
+    private final RentalEventPublisher events;
 
-    public OAuthAccountService(UserRepository userRepository, PasswordEncoder passwordEncoder, AuditService audit) {
+    public OAuthAccountService(UserRepository userRepository, PasswordEncoder passwordEncoder, AuditService audit,
+                               RentalEventPublisher events) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.audit = audit;
+        this.events = events;
     }
 
     @Transactional
@@ -62,6 +67,7 @@ public class OAuthAccountService {
         user.setLastLoginAt(Instant.now());
         User saved = userRepository.save(user);
         audit.log("Account created", saved.getFullName(), "Customer registered with " + label(provider) + " (" + normalized + ")");
+        events.customer(RentalEvent.Type.CUSTOMER_REGISTERED, null, saved.getFullName(), normalized, null, null);
         return saved;
     }
 

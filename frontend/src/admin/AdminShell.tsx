@@ -28,6 +28,7 @@ const nav: { to: string; label: string; icon: string; end?: boolean; needs?: Per
   { to: "/admin/fleet", label: "Fleet Assets", icon: "car" },
   { to: "/admin/customers", label: "Customer Directory", icon: "users", needs: "CUSTOMER_READ" },
   { to: "/admin/contracts", label: "Rental Contracts", icon: "file", needs: "CONTRACT_READ" },
+  { to: "/admin/notifications", label: "Notifications", icon: "mail", needs: "NOTIFICATION_READ" },
   { to: "/admin/logs", label: "System Logs", icon: "logs", needs: "AUDIT_READ" },
   { to: "/admin/staff", label: "Staff & Access", icon: "shield", needs: "STAFF_MANAGE" },
 ];
@@ -37,6 +38,7 @@ const titles: Record<string, string> = {
   "/admin/customers": "Customer Directory",
   "/admin/contracts": "Rental Contracts",
   "/admin/logs": "System Logs",
+  "/admin/notifications": "Notifications",
   "/admin/staff": "Staff & Access",
 };
 
