@@ -5,6 +5,7 @@ import com.vrms.notification.Notification;
 import com.vrms.notification.NotificationRepository;
 import com.vrms.repository.CustomerRepository;
 import com.vrms.security.CurrentUser;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -16,6 +17,7 @@ import java.util.List;
 
 /** Emails and text messages sent by the RabbitMQ consumers (stored in MongoDB). */
 @RestController
+@Tag(name = "Notifications", description = "Emails and SMS sent through RabbitMQ")
 public class NotificationController {
 
     private final NotificationRepository notifications;

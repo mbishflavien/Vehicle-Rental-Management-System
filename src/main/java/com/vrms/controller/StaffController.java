@@ -3,6 +3,7 @@ package com.vrms.controller;
 import com.vrms.dto.StaffRequest;
 import com.vrms.dto.UserView;
 import com.vrms.service.StaffService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +14,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
+@Tag(name = "Staff", description = "Staff accounts and roles (admins only)")
 @RequestMapping("/api/staff")
 @PreAuthorize("hasAuthority('STAFF_MANAGE')")
 public class StaffController {

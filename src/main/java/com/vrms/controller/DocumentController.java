@@ -8,6 +8,7 @@ import com.vrms.repository.CustomerRepository;
 import com.vrms.security.CurrentUser;
 import com.vrms.service.CustomerService;
 import com.vrms.service.DocumentService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -27,6 +28,7 @@ import java.util.UUID;
 
 /** Customer identity documents stored in MongoDB GridFS. */
 @RestController
+@Tag(name = "Documents", description = "Identity documents stored in MongoDB GridFS")
 public class DocumentController {
 
     public record ReviewRequest(@NotNull(message = "Choose verified or rejected") CustomerDocument.Status status,

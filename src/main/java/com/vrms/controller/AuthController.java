@@ -10,6 +10,7 @@ import com.vrms.exception.ApiException;
 import com.vrms.model.User;
 import com.vrms.security.CurrentUser;
 import com.vrms.service.AuthService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
+@Tag(name = "Authentication", description = "Sign in, register, OAuth2 providers and the current user")
 @RequestMapping("/api/auth")
 public class AuthController {
 

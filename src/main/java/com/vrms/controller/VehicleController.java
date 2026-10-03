@@ -2,6 +2,7 @@ package com.vrms.controller;
 
 import com.vrms.model.Vehicle;
 import com.vrms.service.VehicleService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +14,7 @@ import java.util.UUID;
 
 /** GET is public (fleet browsing); changes are staff-only (see SecurityConfig). */
 @RestController
+@Tag(name = "Vehicles", description = "Fleet browsing (public) and fleet management (staff)")
 @RequestMapping("/api/vehicles")
 public class VehicleController {
 

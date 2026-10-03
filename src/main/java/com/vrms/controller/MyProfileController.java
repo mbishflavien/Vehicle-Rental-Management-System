@@ -7,6 +7,7 @@ import com.vrms.model.User;
 import com.vrms.repository.CustomerRepository;
 import com.vrms.security.CurrentUser;
 import com.vrms.service.CustomerService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 /** The signed-in customer's own profile (phone and driver license). */
 @RestController
+@Tag(name = "My profile", description = "The signed-in customer's phone and driver license")
 @RequestMapping("/api/me/profile")
 @PreAuthorize("hasAuthority('BOOKING_OWN')")
 public class MyProfileController {

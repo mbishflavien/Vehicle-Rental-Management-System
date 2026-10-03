@@ -7,6 +7,7 @@ import com.vrms.model.RentalContract;
 import com.vrms.repository.CustomerRepository;
 import com.vrms.security.CurrentUser;
 import com.vrms.service.ContractService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +19,7 @@ import java.util.UUID;
 
 /** The signed-in customer's own bookings. */
 @RestController
+@Tag(name = "My bookings", description = "The signed-in customer's own bookings")
 @RequestMapping("/api/me/bookings")
 @PreAuthorize("hasAuthority('BOOKING_OWN')")
 public class MyBookingsController {

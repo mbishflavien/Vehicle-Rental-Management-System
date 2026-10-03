@@ -66,7 +66,8 @@ public class MessageTemplates {
         return switch (e.type()) {
             case BOOKING_REQUESTED -> "VRMS: booking received for " + e.vehicleModel() + ", " + shortDates(e) + ". We'll confirm shortly.";
             case CONTRACT_ISSUED -> "VRMS: contract " + ref(e) + " issued for " + e.vehicleModel() + " (" + e.plateNumber() + "). Total " + money(e.totalCost()) + ". Drive safe!";
-            case CONTRACT_APPROVED -> "VRMS: confirmed! Pick up your " + e.vehicleModel() + " at " + orTbc(e.pickupBranch()) + " on " + DATE.format(e.startDate()) + ".";
+            case CONTRACT_APPROVED -> "VRMS: confirmed! Pick up your " + e.vehicleModel() + " on " + DATE.format(e.startDate())
+                    + (e.pickupBranch() == null ? " (we'll confirm the branch)." : " at " + e.pickupBranch() + ".");
             case CONTRACT_COMPLETED -> "VRMS: thanks for returning the " + e.vehicleModel() + ". See you on the road again!";
             case CONTRACT_CANCELLED -> "VRMS: booking " + ref(e) + " for " + e.vehicleModel() + " was cancelled. Questions? +250 788 220 440";
             case DOCUMENT_VERIFIED -> "VRMS: your " + e.detail() + " has been verified.";

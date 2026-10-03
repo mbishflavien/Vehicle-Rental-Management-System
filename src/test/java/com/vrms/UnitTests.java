@@ -86,6 +86,15 @@ class UnitTests {
             assertThat(sms.length()).isLessThanOrEqualTo(160);
         }
 
+        @Test
+        void approvalSmsReadsWellWithOrWithoutABranch() {
+            RentalEvent withBranch = booking("Aline");
+            RentalEvent approved = new RentalEvent(withBranch.eventId(), RentalEvent.Type.CONTRACT_APPROVED, withBranch.occurredAt(),
+                    withBranch.contractId(), withBranch.customerId(), "Aline", "a@b.rw", null, "Toyota RAV4", "RAB123A",
+                    null, withBranch.startDate(), withBranch.endDate(), 1.0, null);
+            assertThat(templates.customerSms(approved)).isEqualTo("VRMS: confirmed! Pick up your Toyota RAV4 on Fri 12 Jun 2026 (we'll confirm the branch).");
+        }
+
         @ParameterizedTest
         @CsvSource({"+250 788 123 456,+250788123456", "0788123456,+250788123456", "250788123456,+250788123456"})
         void phoneNumbersBecomeInternational(String input, String expected) throws Exception {

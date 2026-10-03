@@ -2,6 +2,7 @@ package com.vrms.controller;
 
 import com.vrms.model.Branch;
 import com.vrms.service.BranchService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +14,7 @@ import java.util.UUID;
 
 /** Pickup branches. Listing is public (booking forms); changes are staff-only (see SecurityConfig). */
 @RestController
+@Tag(name = "Branches", description = "Pickup branches")
 @RequestMapping("/api/branches")
 public class BranchController {
 
