@@ -1,0 +1,10 @@
+.git
+.idea
+*.iml
+target
+frontend/node_modules
+frontend/dist
+.env
+src/main/resources/application-secrets.properties
+docs
+*.md
