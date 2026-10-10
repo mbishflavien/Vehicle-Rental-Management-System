@@ -49,7 +49,8 @@ public class Vehicle {
     private Integer seats;
 
     @Size(max = 1000)
-    @Pattern(regexp = "^$|https?://.+", message = "Image URL must start with http:// or https://")
+    /** Absolute URL, or a photo served by VRMS itself such as /vehicles/toyota-rav4.jpg. */
+    @Pattern(regexp = "^$|https?://.+|/[A-Za-z0-9._/-]+", message = "Image URL must start with http://, https:// or /")
     private String imageUrl;
 
     /** Home branch where the vehicle is kept and normally picked up. */

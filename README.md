@@ -104,4 +104,4 @@ cd frontend && npm test   # 13 frontend tests
 4. [UI design](docs/04-ui-design.md): responsive screens on desktop, tablet and phone
 5. [Testing](docs/05-testing.md): strategy, inventory, results
 
-Diagram images for reports are in [`docs/diagrams/`](docs/diagrams).
+Diagram images for reports are in [`docs/diagrams/`](docs/diagrams). Vehicle photo credits: [docs/IMAGE_CREDITS.md](docs/IMAGE_CREDITS.md).

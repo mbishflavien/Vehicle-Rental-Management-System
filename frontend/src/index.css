@@ -88,7 +88,7 @@ img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .vehicle-card { background: var(--paper); border-radius: 16px; padding: 9px; box-shadow: 0 3px 0 rgba(73,51,35,.02); transition: .25s; border: 1px solid rgba(101,72,51,.06); }
 .vehicle-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-soft); }
 .vehicle-image { height: 280px; position: relative; overflow: hidden; border-radius: 12px; }
-.vehicle-image img { transition: .5s ease; }
+.vehicle-image img { transition: .5s ease; object-position: center 62%; }
 .vehicle-card:hover .vehicle-image img { transform: scale(1.035); }
 .image-tag { position: absolute; top: 13px; left: 13px; background: rgba(253,251,246,.9); border-radius: 99px; padding: 7px 12px; font-size: 10px; text-transform: uppercase; letter-spacing: .1em; font-weight: 700; }
 .vehicle-body { padding: 22px 15px 14px; }
@@ -133,6 +133,7 @@ footer .wordmark { color: white; }
 .footer-main h4 { color: var(--amber); font-size: 11px; text-transform: uppercase; letter-spacing: .14em; margin: 8px 0 22px; }
 .footer-main > div:not(.footer-brand) { display: flex; flex-direction: column; align-items: flex-start; }
 .footer-main > div > button, .footer-main > div > a, .footer-main > div > span { text-decoration: none; border: 0; background: transparent; color: #d9cec3; padding: 6px 0; font-size: 13px; cursor: pointer; }
+.footer-bottom a { color: inherit; }
 .footer-bottom { border-top: 1px solid rgba(255,255,255,.12); display: flex; justify-content: space-between; padding-top: 22px; padding-bottom: 28px; color: #a99a8e; font-size: 11px; }
 
 .inner-page, .auth-page { min-height: 100vh; }

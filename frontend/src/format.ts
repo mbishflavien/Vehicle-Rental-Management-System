@@ -7,12 +7,17 @@ export const images = {
   scenic: "https://images.unsplash.com/photo-1786702885812-6ca6d1105778?auto=format&fit=crop&w=1200&q=86",
 };
 
+/** Real photos for vehicles added without one (credits: /vehicles/credits.html). */
 const categoryImage: Record<VehicleCategory, string> = {
-  SUV: images.suv, SEDAN: images.road, HATCHBACK: images.scenic, VAN: images.road, COMMERCIAL: images.suv,
+  SUV: "/vehicles/toyota-rav4.jpg",
+  SEDAN: "/vehicles/toyota-corolla.jpg",
+  HATCHBACK: "/vehicles/toyota-vitz.jpg",
+  VAN: "/vehicles/toyota-hiace.jpg",
+  COMMERCIAL: "/vehicles/ford-ranger.jpg",
 };
 
 export function vehicleImage(v: Vehicle): string {
-  return v.imageUrl || (v.category ? categoryImage[v.category] : images.hero);
+  return v.imageUrl || categoryImage[v.category ?? "SUV"];
 }
 
 export const CATEGORIES: VehicleCategory[] = ["SUV", "SEDAN", "HATCHBACK", "VAN", "COMMERCIAL"];

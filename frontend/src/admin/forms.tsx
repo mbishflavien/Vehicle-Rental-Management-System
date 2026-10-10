@@ -78,7 +78,7 @@ export function VehicleDrawer({ vehicle, close, saved }: { vehicle: Vehicle | nu
     if (!v.model.trim()) local.model = "Model is required";
     if (!(rate > 0)) local.dailyRate = "Daily rate must be greater than zero";
     if (!Number.isInteger(seats) || seats < 1 || seats > 60) local.seats = "Seats must be between 1 and 60";
-    if (v.imageUrl && !/^https?:\/\/.+/.test(v.imageUrl.trim())) local.imageUrl = "Image URL must start with http:// or https://";
+    if (v.imageUrl && !/^(https?:\/\/.+|\/[A-Za-z0-9._/-]+)$/.test(v.imageUrl.trim())) local.imageUrl = "Image URL must start with http://, https:// or /";
 
     const body: VehicleInput = {
       plateNumber: normalized, model: v.model.trim(), dailyRate: rate, category: v.category as VehicleInput["category"],
@@ -114,7 +114,7 @@ export function VehicleDrawer({ vehicle, close, saved }: { vehicle: Vehicle | nu
       <Select label={editing ? "Status" : "Initial status"} value={v.vehicleStatus} onChange={set("vehicleStatus")} options={statusOptions} error={f.errors.vehicleStatus}/>
     </div>
     <Select label="Home branch" icon="location" value={v.branchId} onChange={set("branchId")} options={[{ value: "", label: "Not assigned" }, ...branchOptions(branches)]}/>
-    <Field label="Photo URL (optional)" placeholder="https://…" value={v.imageUrl} onChange={(e) => set("imageUrl")(e.target.value)} error={f.errors.imageUrl} hint="Leave empty to use a photo for the category."/>
+    <Field label="Photo URL (optional)" placeholder="https://…" value={v.imageUrl} onChange={(e) => set("imageUrl")(e.target.value)} error={f.errors.imageUrl} hint="Leave empty to use a photo for the category, e.g. /vehicles/toyota-rav4.jpg."/>
   </Drawer>;
 }
 

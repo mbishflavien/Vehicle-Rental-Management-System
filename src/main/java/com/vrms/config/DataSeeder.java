@@ -32,10 +32,10 @@ public class DataSeeder implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(DataSeeder.class);
 
-    private static final String IMG_HERO = "https://images.unsplash.com/photo-1783557105881-a19f1dd0be95?auto=format&fit=crop&w=1200&q=86";
-    private static final String IMG_ROAD = "https://images.unsplash.com/photo-1682773083896-95176d8aecf8?auto=format&fit=crop&w=1200&q=86";
-    private static final String IMG_SUV = "https://images.unsplash.com/photo-1773423203025-d6060d1e5a8c?auto=format&fit=crop&w=1200&q=86";
-    private static final String IMG_SCENIC = "https://images.unsplash.com/photo-1786702885812-6ca6d1105778?auto=format&fit=crop&w=1200&q=86";
+    /** Real photos of each model, served from frontend/public/vehicles (credits: /vehicles/credits.html). */
+    private static String photo(String slug) {
+        return "/vehicles/" + slug + ".jpg";
+    }
 
     private static final String KIGALI = "Kigali Central";
     private static final String AIRPORT = "Kigali International Airport";
@@ -129,15 +129,15 @@ public class DataSeeder implements ApplicationRunner {
     }
 
     private void seedDemo(User admin) {
-        Vehicle rav4 = vehicle("RAB123A", "Toyota RAV4", 85_000, VehicleCategory.SUV, Transmission.AUTOMATIC, FuelType.PETROL, 5, IMG_HERO, KIGALI);
-        Vehicle prado = vehicle("RAE440K", "Toyota Prado", 145_000, VehicleCategory.SUV, Transmission.AUTOMATIC, FuelType.DIESEL, 7, IMG_SUV, AIRPORT);
-        Vehicle tucson = vehicle("RAC902M", "Hyundai Tucson", 95_000, VehicleCategory.SUV, Transmission.AUTOMATIC, FuelType.PETROL, 5, IMG_SCENIC, KIGALI);
-        Vehicle corolla = vehicle("RAD316P", "Toyota Corolla", 60_000, VehicleCategory.SEDAN, Transmission.AUTOMATIC, FuelType.PETROL, 5, IMG_ROAD, KIMIHURURA);
+        Vehicle rav4 = vehicle("RAB123A", "Toyota RAV4", 85_000, VehicleCategory.SUV, Transmission.AUTOMATIC, FuelType.PETROL, 5, photo("toyota-rav4"), KIGALI);
+        Vehicle prado = vehicle("RAE440K", "Toyota Prado", 145_000, VehicleCategory.SUV, Transmission.AUTOMATIC, FuelType.DIESEL, 7, photo("toyota-prado"), AIRPORT);
+        Vehicle tucson = vehicle("RAC902M", "Hyundai Tucson", 95_000, VehicleCategory.SUV, Transmission.AUTOMATIC, FuelType.PETROL, 5, photo("hyundai-tucson"), KIGALI);
+        Vehicle corolla = vehicle("RAD316P", "Toyota Corolla", 60_000, VehicleCategory.SEDAN, Transmission.AUTOMATIC, FuelType.PETROL, 5, photo("toyota-corolla"), KIMIHURURA);
         corolla.setVehicleStatus(VehicleStatus.MAINTENANCE);
-        Vehicle xtrail = vehicle("RAF718C", "Nissan X-Trail", 90_000, VehicleCategory.SUV, Transmission.AUTOMATIC, FuelType.PETROL, 7, IMG_HERO, MUSANZE);
-        Vehicle ranger = vehicle("RAG225J", "Ford Ranger", 120_000, VehicleCategory.COMMERCIAL, Transmission.MANUAL, FuelType.DIESEL, 5, IMG_SUV, MUSANZE);
-        Vehicle hiace = vehicle("RAH518B", "Toyota Hiace", 110_000, VehicleCategory.VAN, Transmission.MANUAL, FuelType.DIESEL, 14, IMG_ROAD, AIRPORT);
-        Vehicle vitz = vehicle("RAA207D", "Toyota Vitz", 45_000, VehicleCategory.HATCHBACK, Transmission.AUTOMATIC, FuelType.PETROL, 5, IMG_SCENIC, HUYE);
+        Vehicle xtrail = vehicle("RAF718C", "Nissan X-Trail", 90_000, VehicleCategory.SUV, Transmission.AUTOMATIC, FuelType.PETROL, 7, photo("nissan-x-trail"), MUSANZE);
+        Vehicle ranger = vehicle("RAG225J", "Ford Ranger", 120_000, VehicleCategory.COMMERCIAL, Transmission.MANUAL, FuelType.DIESEL, 5, photo("ford-ranger"), MUSANZE);
+        Vehicle hiace = vehicle("RAH518B", "Toyota Hiace", 110_000, VehicleCategory.VAN, Transmission.MANUAL, FuelType.DIESEL, 14, photo("toyota-hiace"), AIRPORT);
+        Vehicle vitz = vehicle("RAA207D", "Toyota Vitz", 45_000, VehicleCategory.HATCHBACK, Transmission.AUTOMATIC, FuelType.PETROL, 5, photo("toyota-vitz"), HUYE);
         Set<Vehicle> added = new HashSet<>();
         for (Vehicle v : new Vehicle[]{rav4, prado, tucson, corolla, xtrail, ranger, hiace, vitz}) {
             if (!vehicleRepository.existsByPlateNumber(v.getPlateNumber())) {

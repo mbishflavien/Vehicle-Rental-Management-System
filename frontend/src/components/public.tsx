@@ -46,7 +46,7 @@ export function Footer() {
       <div><h4>Contact</h4><a href="tel:+250788220440">+250 788 220 440</a><a href="mailto:hello@vrms.rw">hello@vrms.rw</a><span>24/7 roadside care</span></div>
       <div><h4>Follow along</h4><a href="https://www.instagram.com" target="_blank" rel="noreferrer">Instagram</a><a href="https://www.linkedin.com" target="_blank" rel="noreferrer">LinkedIn</a><a href="https://www.facebook.com" target="_blank" rel="noreferrer">Facebook</a></div>
     </div>
-    <div className="footer-bottom container"><span>© {new Date().getFullYear()} VRMS Mobility. All rights reserved.</span><span>Privacy · Terms · Cookies</span></div>
+    <div className="footer-bottom container"><span>© {new Date().getFullYear()} VRMS Mobility. All rights reserved.</span><span><a href="/vehicles/credits.html">Photo credits</a> · Privacy · Terms · Cookies</span></div>
   </footer>;
 }
 
