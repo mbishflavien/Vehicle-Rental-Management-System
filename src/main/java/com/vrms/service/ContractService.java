@@ -1,14 +1,18 @@
 package com.vrms.service;
 
+import com.vrms.config.CacheConfig;
 import com.vrms.dto.BookingRequest;
 import com.vrms.dto.ContractRequest;
 import com.vrms.exception.ApiException;
+import com.vrms.messaging.RentalEvent;
+import com.vrms.messaging.RentalEventPublisher;
 import com.vrms.model.*;
 import com.vrms.repository.CustomerRepository;
 import com.vrms.repository.RentalContractRepository;
 import com.vrms.repository.VehicleRepository;
 import com.vrms.security.CurrentUser;
 import org.springframework.http.HttpStatus;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,14 +46,19 @@ public class ContractService {
     private final RentalContractRepository contractRepository;
     private final VehicleRepository vehicleRepository;
     private final CustomerRepository customerRepository;
+    private final BranchService branchService;
     private final AuditService audit;
+    private final RentalEventPublisher events;
 
     public ContractService(RentalContractRepository contractRepository, VehicleRepository vehicleRepository,
-                           CustomerRepository customerRepository, AuditService audit) {
+                           CustomerRepository customerRepository, BranchService branchService, AuditService audit,
+                           RentalEventPublisher events) {
         this.contractRepository = contractRepository;
         this.vehicleRepository = vehicleRepository;
         this.customerRepository = customerRepository;
+        this.branchService = branchService;
         this.audit = audit;
+        this.events = events;
     }
 
     public List<RentalContract> getAll() {
@@ -66,29 +75,34 @@ public class ContractService {
 
     /** Staff "Issue new contract": the vehicle is handed over now, so the contract starts ACTIVE. */
     @Transactional
+    @CacheEvict(cacheNames = {CacheConfig.FLEET, CacheConfig.DASHBOARD}, allEntries = true)
     public RentalContract issue(ContractRequest req) {
         Customer customer = customerRepository.findById(req.customerId())
                 .orElseThrow(() -> ApiException.notFound("Customer"));
         RentalContract contract = open(customer, req.vehicleId(), req.startDate(), req.endDate(),
-                req.pickupLocation(), ContractStatus.ACTIVE, false);
+                req.pickupBranchId(), ContractStatus.ACTIVE, false);
         CurrentUser.get().ifPresent(contract::setIssuedBy);
         audit.logContract("New contract", contract,
                 "Contract issued to " + customer.getFullName() + " for " + contract.getVehicle().getPlateNumber());
         audit.log("Vehicle status", contract.getVehicle().getPlateNumber() + " changed to Rented");
+        events.contract(RentalEvent.Type.CONTRACT_ISSUED, contract);
         return contract;
     }
 
     /** Customer "Reserve & book": held as PENDING until staff approve it. */
     @Transactional
+    @CacheEvict(cacheNames = {CacheConfig.FLEET, CacheConfig.DASHBOARD}, allEntries = true)
     public RentalContract book(Customer customer, BookingRequest req) {
         RentalContract contract = open(customer, req.vehicleId(), req.startDate(), req.endDate(),
-                req.pickupLocation(), ContractStatus.PENDING, true);
+                req.pickupBranchId(), ContractStatus.PENDING, true);
         audit.logContract("Booking request", contract,
                 customer.getFullName() + " requested " + contract.getVehicle().getPlateNumber() + " online");
+        events.contract(RentalEvent.Type.BOOKING_REQUESTED, contract);
         return contract;
     }
 
     @Transactional
+    @CacheEvict(cacheNames = {CacheConfig.FLEET, CacheConfig.DASHBOARD}, allEntries = true)
     public RentalContract changeStatus(UUID id, ContractStatus target) {
         RentalContract contract = getById(id);
         ContractStatus current = contract.getContractStatus();
@@ -118,11 +132,13 @@ public class ContractService {
         audit.logContract(event, saved, "Contract for " + saved.getCustomer().getFullName() + " marked "
                 + VehicleService.pretty(target).toLowerCase());
         audit.log("Vehicle status", vehicle.getPlateNumber() + " changed to " + VehicleService.pretty(vehicleStatus));
+        events.statusChanged(saved, target);
         return saved;
     }
 
     /** A customer may cancel their own booking while it is still pending. */
     @Transactional
+    @CacheEvict(cacheNames = {CacheConfig.FLEET, CacheConfig.DASHBOARD}, allEntries = true)
     public RentalContract cancelOwnBooking(Customer customer, UUID id) {
         RentalContract contract = getById(id);
         if (!contract.getCustomer().getCustomerId().equals(customer.getCustomerId())) {
@@ -136,6 +152,7 @@ public class ContractService {
 
     /** Deleting an open contract releases its vehicle first. */
     @Transactional
+    @CacheEvict(cacheNames = {CacheConfig.FLEET, CacheConfig.DASHBOARD}, allEntries = true)
     public void delete(UUID id) {
         RentalContract contract = getById(id);
         if (VehicleService.OPEN.contains(contract.getContractStatus())) {
@@ -153,7 +170,7 @@ public class ContractService {
     }
 
     private RentalContract open(Customer customer, UUID vehicleId, LocalDate start, LocalDate end,
-                                String pickupLocation, ContractStatus status, boolean onlineBooking) {
+                                UUID pickupBranchId, ContractStatus status, boolean onlineBooking) {
         if (!end.isAfter(start)) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Return date must be after the start date", "endDate");
         }
@@ -177,7 +194,7 @@ public class ContractService {
         contract.setVehicle(vehicle);
         contract.setStartDate(start);
         contract.setEndDate(end);
-        contract.setPickupLocation(pickupLocation == null || pickupLocation.isBlank() ? null : pickupLocation.trim());
+        contract.setPickupBranch(pickupBranchId == null ? vehicle.getBranch() : branchService.getById(pickupBranchId));
         contract.setTotalCost(rentalDays(start, end) * vehicle.getDailyRate());
         contract.setContractStatus(status);
 

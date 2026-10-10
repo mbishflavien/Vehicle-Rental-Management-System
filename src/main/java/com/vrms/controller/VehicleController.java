@@ -2,9 +2,11 @@ package com.vrms.controller;
 
 import com.vrms.model.Vehicle;
 import com.vrms.service.VehicleService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -12,6 +14,7 @@ import java.util.UUID;
 
 /** GET is public (fleet browsing); changes are staff-only (see SecurityConfig). */
 @RestController
+@Tag(name = "Vehicles", description = "Fleet browsing (public) and fleet management (staff)")
 @RequestMapping("/api/vehicles")
 public class VehicleController {
 
@@ -28,16 +31,19 @@ public class VehicleController {
     public Vehicle getVehicle(@PathVariable UUID id) { return service.getById(id); }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('VEHICLE_WRITE')")
     public ResponseEntity<Vehicle> createVehicle(@Valid @RequestBody Vehicle vehicle) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.create(vehicle));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('VEHICLE_WRITE')")
     public Vehicle updateVehicle(@PathVariable UUID id, @Valid @RequestBody Vehicle vehicle) {
         return service.update(id, vehicle);
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('VEHICLE_DELETE')")
     public ResponseEntity<Void> deleteVehicle(@PathVariable UUID id) {
         service.delete(id);
         return ResponseEntity.noContent().build();

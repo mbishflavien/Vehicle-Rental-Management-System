@@ -1,5 +1,6 @@
 package com.vrms.service;
 
+import com.vrms.config.CacheConfig;
 import com.vrms.exception.ApiException;
 import com.vrms.model.ContractStatus;
 import com.vrms.model.Vehicle;
@@ -8,6 +9,8 @@ import com.vrms.repository.RentalContractRepository;
 import com.vrms.repository.VehicleRepository;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,17 +25,20 @@ public class VehicleService {
 
     private final VehicleRepository vehicleRepository;
     private final RentalContractRepository contractRepository;
+    private final BranchService branchService;
     private final AuditService audit;
 
     public VehicleService(VehicleRepository vehicleRepository, RentalContractRepository contractRepository,
-                          AuditService audit) {
+                          BranchService branchService, AuditService audit) {
         this.vehicleRepository = vehicleRepository;
         this.contractRepository = contractRepository;
+        this.branchService = branchService;
         this.audit = audit;
     }
 
+    @Cacheable(CacheConfig.FLEET)
     public List<Vehicle> getAll() {
-        return vehicleRepository.findAll(Sort.by("model", "plateNumber"));
+        return List.copyOf(vehicleRepository.findAllBy(Sort.by("model", "plateNumber")));
     }
 
     public Vehicle getById(UUID id) {
@@ -40,6 +46,7 @@ public class VehicleService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = {CacheConfig.FLEET, CacheConfig.DASHBOARD}, allEntries = true)
     public Vehicle create(Vehicle vehicle) {
         vehicle.setVehicleId(null);
         if (vehicleRepository.existsByPlateNumber(vehicle.getPlateNumber())) {
@@ -49,12 +56,14 @@ public class VehicleService {
         if (vehicle.getVehicleStatus() != VehicleStatus.MAINTENANCE) {
             vehicle.setVehicleStatus(VehicleStatus.AVAILABLE);
         }
+        vehicle.setBranch(branchService.resolve(vehicle.getBranchId()));
         Vehicle saved = vehicleRepository.save(vehicle);
         audit.log("Vehicle added", saved.getModel() + " (" + saved.getPlateNumber() + ") added to the fleet");
         return saved;
     }
 
     @Transactional
+    @CacheEvict(cacheNames = {CacheConfig.FLEET, CacheConfig.DASHBOARD}, allEntries = true)
     public Vehicle update(UUID id, Vehicle changes) {
         Vehicle existing = getById(id);
         if (vehicleRepository.existsByPlateNumberAndVehicleIdNot(changes.getPlateNumber(), id)) {
@@ -81,6 +90,7 @@ public class VehicleService {
         existing.setFuelType(changes.getFuelType());
         existing.setSeats(changes.getSeats());
         existing.setImageUrl(changes.getImageUrl());
+        existing.setBranch(branchService.resolve(changes.getBranchId()));
         existing.setVehicleStatus(requested);
         Vehicle saved = vehicleRepository.save(existing);
 
@@ -96,6 +106,7 @@ public class VehicleService {
      * contract history is removed with it.
      */
     @Transactional
+    @CacheEvict(cacheNames = {CacheConfig.FLEET, CacheConfig.DASHBOARD}, allEntries = true)
     public void delete(UUID id) {
         Vehicle vehicle = getById(id);
         if (contractRepository.existsByVehicleAndContractStatusIn(vehicle, OPEN)) {

@@ -1,31 +1,34 @@
 package com.vrms.model;
 
-import jakarta.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.IndexDirection;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
-import java.util.UUID;
 
-/** One row in the System Logs page: who did what, and when. */
-@Entity
-@Table(name = "audit_logs", indexes = @Index(name = "idx_audit_logs_timestamp", columnList = "timestamp"))
+/**
+ * One entry in the System Logs: who did what, and when. Stored in MongoDB: an append-only stream
+ * of operational events with a loose, growing shape that is never joined or updated.
+ */
+@Document(collection = "audit_logs")
+@CompoundIndex(name = "contract_activity_idx", def = "{'plateNumber': 1, 'timestamp': -1}", sparse = true)
 public class AuditLog {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID logId;
+    private String logId;
 
-    @Column(nullable = false)
+    @Indexed(name = "timestamp_desc", direction = IndexDirection.DESCENDING)
     private Instant timestamp;
 
     /** Short event name, e.g. "Contract created". */
-    @Column(nullable = false)
+    @Indexed
     private String event;
 
     /** Name of the user who triggered the event, or "System". */
-    @Column(nullable = false)
     private String actor;
 
-    @Column(length = 500)
     private String details;
 
     /** Optional amount (RWF) for money-related events, shown on the dashboard. */
@@ -46,7 +49,7 @@ public class AuditLog {
         this.details = details;
     }
 
-    public UUID getLogId() { return logId; }
+    public String getLogId() { return logId; }
     public Instant getTimestamp() { return timestamp; }
     public String getEvent() { return event; }
     public String getActor() { return actor; }

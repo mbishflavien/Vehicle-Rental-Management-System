@@ -13,5 +13,6 @@ public record RegisterRequest(
         @NotBlank(message = "Driver license is required")
         @Pattern(regexp = "(?i)DL-[A-Z0-9-]+", message = "Driver License must start with 'DL-', e.g. DL-48219") String driverLicenseNumber,
         @NotBlank(message = "Password is required")
-        @Size(min = 8, max = 72, message = "Password must be 8 to 72 characters") String password) {
+        @Size(min = 8, max = 72, message = "Password must be 8 to 72 characters")
+        @Pattern(regexp = "^(?=.*[A-Za-z])(?=.*\\d).+$", message = "Password must contain letters and numbers") String password) {
 }

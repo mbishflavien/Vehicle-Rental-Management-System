@@ -3,7 +3,8 @@ import { useSearchParams } from "react-router-dom";
 import { api, errorMessage, type Vehicle } from "../api";
 import { BookingModal, defaultTrip, Footer, PublicNav, VehicleCard, type TripPrefs } from "../components/public";
 import { EmptyState, ErrorBanner, Icon, Select } from "../components/ui";
-import { CATEGORIES, label, PICKUP_LOCATIONS, plate } from "../format";
+import { branchOptions, useBranches } from "../branches";
+import { CATEGORIES, label, plate } from "../format";
 
 type Sort = "availability" | "price-asc" | "price-desc" | "model";
 
@@ -15,6 +16,7 @@ export default function FleetPage() {
   const [type, setType] = useState(params.get("type") ?? "");
   const [sort, setSort] = useState<Sort>("availability");
   const [booking, setBooking] = useState<Vehicle | null>(null);
+  const branches = useBranches();
 
   const fallback = defaultTrip();
   const [trip, setTrip] = useState<TripPrefs>({
@@ -43,6 +45,7 @@ export default function FleetPage() {
     const q = query.trim().toLowerCase().replace(/\s+/g, "");
     const rows = (vehicles ?? []).filter((v) =>
       (!type || v.category === type) &&
+      (!trip.pickup || v.branch?.branchId === trip.pickup) &&
       (!q || `${v.model}${v.plateNumber}`.toLowerCase().replace(/\s+/g, "").includes(q)));
     const byAvailability = (v: Vehicle) => (v.vehicleStatus === "AVAILABLE" ? 0 : 1);
     return rows.sort((a, b) => {
@@ -53,14 +56,14 @@ export default function FleetPage() {
         default: return byAvailability(a) - byAvailability(b) || a.dailyRate - b.dailyRate;
       }
     });
-  }, [vehicles, query, type, sort]);
+  }, [vehicles, query, type, sort, trip.pickup]);
 
   return <div className="inner-page">
     <PublicNav className="fleet-nav"/>
     <header className="page-hero"><span className="eyebrow">The VRMS collection</span><h1>Choose the right car<br/>for your road.</h1><p>Reliable, beautifully maintained vehicles with local support wherever your journey takes you.</p></header>
     <div className="filter-bar">
       <label><Icon name="search"/><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search model or plate" aria-label="Search model or plate"/></label>
-      <Select label="Pickup" value={trip.pickup} onChange={(pickup) => setTrip({ ...trip, pickup })} options={PICKUP_LOCATIONS.map((l) => ({ value: l, label: l }))}/>
+      <Select label="Pickup" value={trip.pickup} onChange={(pickup) => setTrip({ ...trip, pickup })} options={[{ value: "", label: "All branches" }, ...branchOptions(branches)]}/>
       <Select label="Vehicle type" value={type} onChange={setType} options={[{ value: "", label: "All types" }, ...CATEGORIES.map((c) => ({ value: c, label: label(c) }))]}/>
       <Select label="Sort by" value={sort} onChange={(s) => setSort(s as Sort)} options={[
         { value: "availability", label: "Availability" },
@@ -77,7 +80,7 @@ export default function FleetPage() {
           ? [0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="vehicle-card skeleton"/>)
           : shown.map((v) => <VehicleCard key={v.vehicleId} vehicle={v} onReserve={setBooking}/>)}
       </div>
-      {vehicles && shown.length === 0 && <EmptyState title="No vehicles match your search" text={query ? `Nothing found for "${query}". Try a model name or a plate like ${plate("RAB123A")}.` : "Try another vehicle type."}/>}
+      {vehicles && shown.length === 0 && <EmptyState title="No vehicles match your search" text={query ? `Nothing found for "${query}". Try a model name or a plate like ${plate("RAB123A")}.` : "Try another vehicle type or branch."}/>}
     </main>
     <Footer/>
     {booking && <BookingModal vehicle={booking} trip={trip} close={() => setBooking(null)} onBooked={load}/>}

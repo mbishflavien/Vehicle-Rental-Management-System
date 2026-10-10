@@ -1,0 +1,87 @@
+# VRMS full stack.
+#   Infrastructure only (run the app from IntelliJ / npm run dev):  docker compose up -d postgres mongo rabbitmq mailpit
+#   Everything, including the app on http://localhost:8080:           docker compose up -d --build
+# Then: app http://localhost:8080 · API docs /swagger-ui.html · emails http://localhost:8025 · RabbitMQ http://localhost:15672
+# Settings come from .env (copy .env.example).
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: vrms_db
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"   # 5433 so it doesn't clash with a locally installed PostgreSQL
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d vrms_db"]
+      interval: 5s
+      retries: 10
+
+  mongo:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    ports:
+      - "5672:5672"     # AMQP
+      - "15672:15672"   # Management UI (guest / guest)
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      retries: 10
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025"     # SMTP
+      - "8025:8025"     # Web inbox showing every email VRMS sends
+
+  app:
+    build: .
+    image: ${VRMS_IMAGE:-vrms-app:local}
+    depends_on:
+      postgres: { condition: service_healthy }
+      mongo: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+      mailpit: { condition: service_started }
+    ports:
+      - "8080:8080"
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/vrms_db
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD}
+      MONGODB_URI: mongodb://mongo:27017/vrms
+      RABBITMQ_HOST: rabbitmq
+      MAIL_HOST: mailpit
+      MAIL_PORT: 1025
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
+      AGENT_PASSWORD: ${AGENT_PASSWORD:-}
+      CORS_ORIGINS: http://localhost:8080,http://localhost:5173
+      APP_BASE_URL: http://localhost:8080
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+      AT_USERNAME: ${AT_USERNAME:-}
+      AT_API_KEY: ${AT_API_KEY:-}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q UP"]
+      interval: 15s
+      start_period: 60s
+      retries: 5
+
+volumes:
+  postgres-data:
+  mongo-data:

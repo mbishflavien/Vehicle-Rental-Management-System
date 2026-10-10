@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { api, errorMessage, type Vehicle } from "../api";
+import { useCan } from "../auth";
 import { Button, DataTable, EmptyState, ErrorBanner, Icon, Loading, RowMenu, StatusPill, TableFooter, useFeedback, usePaged } from "../components/ui";
 import { CATEGORIES, label, plate, rwf, shortId } from "../format";
 import { AdminPageHeader, AdminSearch, matches, useAdmin } from "./AdminShell";
@@ -8,6 +9,7 @@ import { VehicleDrawer } from "./forms";
 export default function Assets() {
   const { query, refreshCounts } = useAdmin();
   const { toast, confirm } = useFeedback();
+  const can = useCan();
   const [vehicles, setVehicles] = useState<Vehicle[] | null>(null);
   const [error, setError] = useState("");
   const [category, setCategory] = useState("");
@@ -22,12 +24,12 @@ export default function Assets() {
 
   const rows = useMemo(() => (vehicles ?? []).filter((v) =>
     (!category || v.category === category) && (!status || v.vehicleStatus === status) &&
-    matches(query, v.model, v.plateNumber, shortId("VEH", v.vehicleId))), [vehicles, category, status, query]);
+    matches(query, v.model, v.plateNumber, v.branch?.name, shortId("VEH", v.vehicleId))), [vehicles, category, status, query]);
   const paged = usePaged(rows, 10);
 
   const setVehicleStatus = async (v: Vehicle, next: "AVAILABLE" | "MAINTENANCE") => {
     try {
-      await api.updateVehicle(v.vehicleId, { ...v, vehicleStatus: next });
+      await api.updateVehicle(v.vehicleId, { ...v, branchId: v.branch?.branchId ?? null, vehicleStatus: next });
       toast(`${plate(v.plateNumber)} is now ${label(next).toLowerCase()}`);
       load();
       refreshCounts();
@@ -62,18 +64,19 @@ export default function Assets() {
       <label className="select-button"><select value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Status">
         <option value="">Any status</option>{["AVAILABLE", "RENTED", "RESERVED", "MAINTENANCE"].map((s) => <option key={s} value={s}>{label(s)}</option>)}
       </select><Icon name="chevron" size={16}/></label>
-      <Button onClick={() => setEditing(null)}><Icon name="plus" size={17}/> Add new vehicle</Button>
+      {can("VEHICLE_WRITE") && <Button onClick={() => setEditing(null)}><Icon name="plus" size={17}/> Add new vehicle</Button>}
     </AdminPageHeader>
     {error && <ErrorBanner message={error} onRetry={load}/>}
     <section className="admin-card">
       {vehicles === null && !error ? <Loading/> : <>
-        <DataTable headers={["Vehicle ID", "Plate number", "Model", "Category", "Daily rate", "Status", ""]}
+        <DataTable headers={["Vehicle ID", "Plate number", "Model", "Category", "Branch", "Daily rate", "Status", ""]}
           empty={rows.length === 0 && <EmptyState title={vehicles?.length ? "No vehicles match" : "No vehicles yet"} text={vehicles?.length ? "Try a different search or filter." : "Add your first vehicle to start renting."}/>}>
           {paged.slice.map((v) => <tr key={v.vehicleId}>
             <td className="muted">{shortId("VEH", v.vehicleId)}</td>
             <td><span className="plate">{plate(v.plateNumber)}</span></td>
             <td><strong>{v.model}</strong></td>
             <td>{label(v.category)}</td>
+            <td>{v.branch?.name ?? <span className="muted">—</span>}</td>
             <td><strong>{rwf(v.dailyRate)}</strong></td>
             <td><StatusPill status={v.vehicleStatus}/></td>
             <td className="actions"><RowMenu actions={[
@@ -81,7 +84,7 @@ export default function Assets() {
               v.vehicleStatus === "MAINTENANCE"
                 ? { label: "Mark available", onSelect: () => setVehicleStatus(v, "AVAILABLE") }
                 : { label: "Send to maintenance", onSelect: () => setVehicleStatus(v, "MAINTENANCE"), disabled: v.vehicleStatus !== "AVAILABLE" },
-              { label: "Delete vehicle", onSelect: () => remove(v), danger: true },
+              ...(can("VEHICLE_DELETE") ? [{ label: "Delete vehicle", onSelect: () => remove(v), danger: true }] : []),
             ]}/></td>
           </tr>)}
         </DataTable>

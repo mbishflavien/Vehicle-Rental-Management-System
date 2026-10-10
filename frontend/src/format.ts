@@ -7,22 +7,18 @@ export const images = {
   scenic: "https://images.unsplash.com/photo-1786702885812-6ca6d1105778?auto=format&fit=crop&w=1200&q=86",
 };
 
+/** Real photos for vehicles added without one (credits: /vehicles/credits.html). */
 const categoryImage: Record<VehicleCategory, string> = {
-  SUV: images.suv, SEDAN: images.road, HATCHBACK: images.scenic, VAN: images.road, COMMERCIAL: images.suv,
+  SUV: "/vehicles/toyota-rav4.jpg",
+  SEDAN: "/vehicles/toyota-corolla.jpg",
+  HATCHBACK: "/vehicles/toyota-vitz.jpg",
+  VAN: "/vehicles/toyota-hiace.jpg",
+  COMMERCIAL: "/vehicles/ford-ranger.jpg",
 };
 
 export function vehicleImage(v: Vehicle): string {
-  return v.imageUrl || (v.category ? categoryImage[v.category] : images.hero);
+  return v.imageUrl || categoryImage[v.category ?? "SUV"];
 }
-
-export const PICKUP_LOCATIONS = [
-  "Kigali Central",
-  "Kigali International Airport",
-  "Kimihurura",
-  "Musanze",
-  "Rubavu",
-  "Huye",
-];
 
 export const CATEGORIES: VehicleCategory[] = ["SUV", "SEDAN", "HATCHBACK", "VAN", "COMMERCIAL"];
 
@@ -121,6 +117,12 @@ export function greeting(): string {
 
 export const initials = (name: string) =>
   name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join("");
+
+export const documentTypeLabel = (t: string) =>
+  ({ DRIVER_LICENSE: "Driver license", NATIONAL_ID: "National ID", PASSPORT: "Passport", OTHER: "Other document" } as Record<string, string>)[t] ?? t;
+
+export const fileSize = (bytes: number) =>
+  bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
 
 // --- CSV -----------------------------------------------------------------------------------------
 

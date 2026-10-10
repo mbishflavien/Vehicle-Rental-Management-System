@@ -23,7 +23,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
-class VrmsApiTest {
+class VrmsApiTest extends IntegrationTest {
 
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
@@ -149,8 +149,7 @@ class VrmsApiTest {
         LocalDate start = LocalDate.now().plusDays(1);
 
         JsonNode booking = read(send("POST", "/api/me/bookings", customerToken, Map.of(
-                "vehicleId", vehicleId, "startDate", start.toString(), "endDate", start.plusDays(5).toString(),
-                "pickupLocation", "Kigali Central"))
+                "vehicleId", vehicleId, "startDate", start.toString(), "endDate", start.plusDays(5).toString()))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.contractStatus").value("PENDING"))
                 .andExpect(jsonPath("$.totalCost").value(425_000.0)));
@@ -212,6 +211,170 @@ class VrmsApiTest {
 
         send("GET", "/api/logs", adminToken, null)
                 .andExpect(jsonPath("$[*].event", hasItem("New contract")));
+    }
+
+    // --- RBAC & security ------------------------------------------------------------------------
+
+    @Test
+    void agentCanRunRentalsButNotDeleteOrReadAuditLog() throws Exception {
+        String agent = login("agent@test.rw", "test-agent-pass1");
+        send("GET", "/api/auth/me", agent, null)
+                .andExpect(jsonPath("$.role").value("AGENT"))
+                .andExpect(jsonPath("$.permissions", hasItem("CONTRACT_WRITE")))
+                .andExpect(jsonPath("$.permissions", not(hasItem("VEHICLE_DELETE"))));
+
+        String vehicleId = read(send("POST", "/api/vehicles", agent,
+                Map.of("plateNumber", "RAB321C", "model", "Toyota Vitz", "dailyRate", 45_000))
+                .andExpect(status().isCreated())).get("vehicleId").asText();
+        send("GET", "/api/dashboard", agent, null).andExpect(status().isOk());
+
+        send("DELETE", "/api/vehicles/" + vehicleId, agent, null).andExpect(status().isForbidden());
+        send("GET", "/api/logs", agent, null).andExpect(status().isForbidden());
+        send("GET", "/api/staff", agent, null).andExpect(status().isForbidden());
+
+        send("DELETE", "/api/vehicles/" + vehicleId, adminToken, null).andExpect(status().isNoContent());
+    }
+
+    @Test
+    void adminManagesStaffAndDisablingRevokesAccessImmediately() throws Exception {
+        String id = read(send("POST", "/api/staff", adminToken, Map.of("fullName", "Diane Mukamana",
+                "email", "diane@vrms.rw", "jobTitle", "Agent", "role", "AGENT", "password", "temp-pass-123"))
+                .andExpect(status().isCreated())).get("userId").asText();
+
+        String diane = login("diane@vrms.rw", "temp-pass-123");
+        send("GET", "/api/contracts", diane, null).andExpect(status().isOk());
+
+        send("PUT", "/api/staff/" + id, adminToken, Map.of("fullName", "Diane Mukamana",
+                "email", "diane@vrms.rw", "role", "AGENT", "enabled", false))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.enabled").value(false));
+
+        // Her still-unexpired token stops working, and she can't sign in again
+        send("GET", "/api/contracts", diane, null).andExpect(status().isUnauthorized());
+        send("POST", "/api/auth/login", null, Map.of("email", "diane@vrms.rw", "password", "temp-pass-123"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void lastAdminCannotBeDisabledOrDemoted() throws Exception {
+        String adminId = read(send("GET", "/api/auth/me", adminToken, null)).get("userId").asText();
+        send("PUT", "/api/staff/" + adminId, adminToken, Map.of("fullName", "Grace Kamanzi",
+                "email", "staff@test.rw", "role", "AGENT"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void repeatedFailedSignInsAreThrottled() throws Exception {
+        Map<String, String> wrong = Map.of("email", "staff@test.rw", "password", "wrong-password");
+        for (int i = 0; i < 3; i++) {
+            send("POST", "/api/auth/login", null, wrong).andExpect(status().isUnauthorized());
+        }
+        send("POST", "/api/auth/login", null, wrong).andExpect(status().isTooManyRequests());
+        // Even the right password is refused during the lockout
+        send("POST", "/api/auth/login", null, Map.of("email", "staff@test.rw", "password", "test-admin-pass"))
+                .andExpect(status().isTooManyRequests());
+    }
+
+    @Test
+    void tamperedOrForeignTokensAreRejected() throws Exception {
+        String[] parts = adminToken.split("\\.");
+        String tampered = parts[0] + "." + parts[1] + "x." + parts[2];
+        send("GET", "/api/auth/me", tampered, null).andExpect(status().isUnauthorized());
+        send("GET", "/api/auth/me", "not-a-jwt", null).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void customersCanChangeTheirPassword() throws Exception {
+        String token = registerCustomer("aline@email.com", "DL-48219");
+        send("PUT", "/api/auth/password", token, Map.of("currentPassword", "wrong", "newPassword", "new-pass-123"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors.currentPassword").exists());
+        send("PUT", "/api/auth/password", token, Map.of("currentPassword", "secret-pass-1", "newPassword", "new-pass-123"))
+                .andExpect(status().isNoContent());
+        login("aline@email.com", "new-pass-123");
+    }
+
+    // --- OAuth2 sign-in (Google / GitHub) -------------------------------------------------------
+
+    @Autowired com.vrms.security.OAuthAccountService oauthAccounts;
+    @Autowired com.vrms.security.JwtService jwtService;
+
+    @Test
+    void oauthSignInCreatesCustomerWhoMustCompleteProfileBeforeBooking() throws Exception {
+        send("GET", "/api/auth/providers", null, null).andExpect(status().isOk());
+
+        // A walk-in customer already exists with this email and license
+        send("POST", "/api/customers", adminToken,
+                Map.of("fullName", "Aline U", "email", "aline@gmail.com", "driverLicenseNumber", "DL-48219"))
+                .andExpect(status().isCreated());
+
+        var user = oauthAccounts.findOrCreate(com.vrms.model.AuthProvider.GOOGLE, "Aline@Gmail.com", "Aline Uwase");
+        String token = jwtService.issueToken(user);
+        send("GET", "/api/auth/me", token, null)
+                .andExpect(jsonPath("$.role").value("CUSTOMER"))
+                .andExpect(jsonPath("$.authProvider").value("GOOGLE"))
+                .andExpect(jsonPath("$.customerId").doesNotExist());
+        send("GET", "/api/me/bookings", token, null).andExpect(status().isForbidden());
+
+        // Wrong license for the walk-in profile is refused; the right one links it (no duplicate)
+        send("PUT", "/api/me/profile", token, Map.of("driverLicenseNumber", "DL-99999"))
+                .andExpect(status().isConflict());
+        send("PUT", "/api/me/profile", token, Map.of("phoneNumber", "+250 788 245 610", "driverLicenseNumber", "dl-48219"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.hasAccount").value(true));
+        send("GET", "/api/customers", adminToken, null).andExpect(jsonPath("$", hasSize(1)));
+        send("GET", "/api/me/bookings", token, null).andExpect(status().isOk());
+
+        // Signing in again with the same verified email reuses the account
+        var again = oauthAccounts.findOrCreate(com.vrms.model.AuthProvider.GOOGLE, "aline@gmail.com", "Aline Uwase");
+        org.junit.jupiter.api.Assertions.assertEquals(user.getUserId(), again.getUserId());
+    }
+
+    // --- MongoDB: audit trail and customer documents (GridFS) ----------------------------------------
+
+    static final byte[] PNG = {(byte) 0x89, 'P', 'N', 'G', 13, 10, 26, 10, 0, 0, 0, 13};
+
+    ResultActions upload(String token, String type, String name, byte[] bytes) throws Exception {
+        return mvc.perform(multipart("/api/me/documents")
+                .file(new org.springframework.mock.web.MockMultipartFile("file", name, "image/png", bytes))
+                .param("type", type)
+                .header("Authorization", "Bearer " + token));
+    }
+
+    @Test
+    void customerUploadsLicenseScanAndStaffVerifiesIt() throws Exception {
+        String customer = registerCustomer("aline@email.com", "DL-48219");
+        String customerId = read(send("GET", "/api/auth/me", customer, null)).get("customerId").asText();
+
+        // Content is checked by its bytes, not by the name or declared type
+        upload(customer, "DRIVER_LICENSE", "license.png", "<script>alert(1)</script>".getBytes())
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors.file").value("Upload a PDF, JPEG or PNG file"));
+
+        String docId = read(upload(customer, "DRIVER_LICENSE", "license.png", PNG)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("PENDING"))
+                .andExpect(jsonPath("$.contentType").value("image/png"))
+                .andExpect(jsonPath("$.fileId").doesNotExist())).get("documentId").asText();
+
+        mvc.perform(get("/api/documents/" + docId + "/content").header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(content().bytes(PNG));
+
+        // Another customer can't see it
+        String other = registerCustomer("eric@email.com", "DL-19385");
+        send("GET", "/api/me/documents/" + docId + "/content", other, null).andExpect(status().isNotFound());
+
+        send("PATCH", "/api/documents/" + docId + "/review", adminToken, Map.of("status", "VERIFIED"))
+                .andExpect(jsonPath("$.status").value("VERIFIED"))
+                .andExpect(jsonPath("$.reviewedBy").value("Grace Kamanzi"));
+        send("GET", "/api/customers/" + customerId + "/documents", adminToken, null)
+                .andExpect(jsonPath("$", hasSize(1)));
+        send("DELETE", "/api/me/documents/" + docId, customer, null).andExpect(status().isBadRequest());
+
+        // Every step was written to the MongoDB audit trail
+        send("GET", "/api/logs", adminToken, null)
+                .andExpect(jsonPath("$[*].event", hasItems("Document uploaded", "Document reviewed")));
     }
 
     @Test

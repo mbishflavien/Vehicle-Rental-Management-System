@@ -13,6 +13,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.Instant;
@@ -67,6 +69,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<Map<String, Object>> handleAuth(AuthenticationException ex) {
         return body(HttpStatus.UNAUTHORIZED, "Invalid email or password", Map.of());
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<Map<String, Object>> handleTooLarge(MaxUploadSizeExceededException ex) {
+        return body(HttpStatus.BAD_REQUEST, "Files must be 5 MB or smaller", Map.of("file", "Files must be 5 MB or smaller"));
+    }
+
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ResponseEntity<Map<String, Object>> handleMissingPart(MissingServletRequestPartException ex) {
+        return body(HttpStatus.BAD_REQUEST, "Choose a file to upload", Map.of("file", "Choose a file to upload"));
     }
 
     @ExceptionHandler(NoResourceFoundException.class)

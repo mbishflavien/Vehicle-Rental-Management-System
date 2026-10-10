@@ -1,7 +1,11 @@
 // Typed client for the Spring Boot REST API. Every error from the API has the shape
 // { status, message, fieldErrors: { field: message }, timestamp } (see GlobalExceptionHandler).
 
-export type Role = "ADMIN" | "CUSTOMER";
+export type Role = "ADMIN" | "AGENT" | "CUSTOMER";
+export type Permission =
+  | "VEHICLE_WRITE" | "VEHICLE_DELETE" | "CUSTOMER_READ" | "CUSTOMER_WRITE" | "CUSTOMER_DELETE"
+  | "CONTRACT_READ" | "CONTRACT_WRITE" | "CONTRACT_DELETE" | "BRANCH_MANAGE" | "DASHBOARD_READ"
+  | "AUDIT_READ" | "NOTIFICATION_READ" | "DOCUMENT_READ" | "STAFF_MANAGE" | "BOOKING_OWN";
 export type VehicleStatus = "AVAILABLE" | "RENTED" | "MAINTENANCE" | "RESERVED";
 export type ContractStatus = "PENDING" | "ACTIVE" | "COMPLETED" | "CANCELLED";
 export type VehicleCategory = "SUV" | "SEDAN" | "HATCHBACK" | "VAN" | "COMMERCIAL";
@@ -15,12 +19,35 @@ export interface UserView {
   role: Role;
   jobTitle: string | null;
   customerId: string | null;
+  permissions: Permission[];
+  enabled: boolean;
+  authProvider: "LOCAL" | "GOOGLE" | "GITHUB";
+  lastLoginAt: string | null;
+  createdAt: string | null;
+}
+
+export interface StaffInput {
+  fullName: string;
+  email: string;
+  jobTitle: string | null;
+  role: Role;
+  password?: string;
+  enabled?: boolean;
 }
 
 export interface AuthResponse {
   token: string;
+  tokenType: string;
   expiresInSeconds: number;
   user: UserView;
+}
+
+export interface Branch {
+  branchId: string;
+  name: string;
+  city: string;
+  address: string | null;
+  phoneNumber: string | null;
 }
 
 export interface Vehicle {
@@ -34,10 +61,11 @@ export interface Vehicle {
   fuelType: FuelType | null;
   seats: number | null;
   imageUrl: string | null;
+  branch: Branch | null;
   createdAt: string;
 }
 
-export type VehicleInput = Omit<Vehicle, "vehicleId" | "createdAt">;
+export type VehicleInput = Omit<Vehicle, "vehicleId" | "createdAt" | "branch"> & { branchId: string | null };
 
 export interface Customer {
   customerId: string;
@@ -57,11 +85,45 @@ export interface Contract {
   endDate: string;
   totalCost: number;
   contractStatus: ContractStatus;
-  pickupLocation: string | null;
+  pickupBranch: Branch | null;
   customer: Customer;
   vehicle: Vehicle;
   issuedByName: string | null;
   createdAt: string;
+}
+
+export type DocumentType = "DRIVER_LICENSE" | "NATIONAL_ID" | "PASSPORT" | "OTHER";
+export type DocumentStatus = "PENDING" | "VERIFIED" | "REJECTED";
+
+export interface CustomerDocument {
+  documentId: string;
+  customerId: string;
+  type: DocumentType;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  status: DocumentStatus;
+  uploadedBy: string;
+  uploadedAt: string;
+  reviewedBy: string | null;
+  reviewedAt: string | null;
+  reviewNote: string | null;
+}
+
+export interface Notification {
+  notificationId: string;
+  createdAt: string;
+  eventId: string;
+  eventType: string;
+  channel: "EMAIL" | "SMS";
+  recipient: string;
+  subject: string | null;
+  body: string;
+  status: "SENT" | "SIMULATED" | "FAILED";
+  provider: string;
+  error: string | null;
+  customerId: string | null;
+  contractId: string | null;
 }
 
 export interface AuditLog {
@@ -122,11 +184,12 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   const headers: Record<string, string> = {};
   const token = tokenStore.get();
   if (token) headers.Authorization = `Bearer ${token}`;
-  if (body !== undefined) headers["Content-Type"] = "application/json";
+  const isForm = body instanceof FormData;
+  if (body !== undefined && !isForm) headers["Content-Type"] = "application/json";
 
   let res: Response;
   try {
-    res = await fetch(`/api${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+    res = await fetch(`/api${path}`, { method, headers, body: body === undefined ? undefined : isForm ? body : JSON.stringify(body) });
   } catch {
     throw new ApiError(0, "Can't reach the VRMS server. Check that the backend is running.");
   }
@@ -145,6 +208,17 @@ export const api = {
   register: (body: { fullName: string; email: string; phoneNumber: string; driverLicenseNumber: string; password: string }) =>
     request<AuthResponse>("POST", "/auth/register", body),
   me: () => request<UserView>("GET", "/auth/me"),
+  providers: () => request<string[]>("GET", "/auth/providers"),
+  myProfile: () => request<Customer>("GET", "/me/profile"),
+  saveMyProfile: (body: { phoneNumber: string; driverLicenseNumber: string }) => request<Customer>("PUT", "/me/profile", body),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    request<void>("PUT", "/auth/password", { currentPassword, newPassword }),
+
+  staff: () => request<UserView[]>("GET", "/staff"),
+  createStaff: (body: StaffInput) => request<UserView>("POST", "/staff", body),
+  updateStaff: (id: string, body: StaffInput) => request<UserView>("PUT", `/staff/${id}`, body),
+
+  branches: () => request<Branch[]>("GET", "/branches"),
 
   vehicles: () => request<Vehicle[]>("GET", "/vehicles"),
   vehicle: (id: string) => request<Vehicle>("GET", `/vehicles/${id}`),
@@ -158,19 +232,41 @@ export const api = {
   deleteCustomer: (id: string) => request<void>("DELETE", `/customers/${id}`),
 
   contracts: () => request<Contract[]>("GET", "/contracts"),
-  issueContract: (body: { customerId: string; vehicleId: string; startDate: string; endDate: string; pickupLocation?: string }) =>
+  issueContract: (body: { customerId: string; vehicleId: string; startDate: string; endDate: string; pickupBranchId?: string }) =>
     request<Contract>("POST", "/contracts", body),
   setContractStatus: (id: string, status: ContractStatus) => request<Contract>("PATCH", `/contracts/${id}/status`, { status }),
   deleteContract: (id: string) => request<void>("DELETE", `/contracts/${id}`),
 
   myBookings: () => request<Contract[]>("GET", "/me/bookings"),
-  book: (body: { vehicleId: string; startDate: string; endDate: string; pickupLocation?: string }) =>
+  book: (body: { vehicleId: string; startDate: string; endDate: string; pickupBranchId?: string }) =>
     request<Contract>("POST", "/me/bookings", body),
   cancelBooking: (id: string) => request<Contract>("POST", `/me/bookings/${id}/cancel`),
+
+  myDocuments: () => request<CustomerDocument[]>("GET", "/me/documents"),
+  uploadMyDocument: (type: DocumentType, file: File) => {
+    const form = new FormData();
+    form.append("type", type);
+    form.append("file", file);
+    return request<CustomerDocument>("POST", "/me/documents", form);
+  },
+  deleteMyDocument: (id: string) => request<void>("DELETE", `/me/documents/${id}`),
+  customerDocuments: (customerId: string) => request<CustomerDocument[]>("GET", `/customers/${customerId}/documents`),
+  reviewDocument: (id: string, status: DocumentStatus, note?: string) => request<CustomerDocument>("PATCH", `/documents/${id}/review`, { status, note }),
+
+  notifications: (limit = 300) => request<Notification[]>("GET", `/notifications?limit=${limit}`),
+  myNotifications: () => request<Notification[]>("GET", "/me/notifications"),
 
   dashboard: () => request<DashboardStats>("GET", "/dashboard"),
   logs: (limit = 500) => request<AuditLog[]>("GET", `/logs?limit=${limit}`),
 };
+
+/** Downloads a protected file (sent with the bearer token) and returns a temporary object URL. */
+export async function fetchFileUrl(path: string): Promise<string> {
+  const token = tokenStore.get();
+  const res = await fetch(`/api${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  if (!res.ok) throw new ApiError(res.status, "The file could not be opened");
+  return URL.createObjectURL(await res.blob());
+}
 
 /** Message for a caught error, whatever threw it. */
 export function errorMessage(e: unknown): string {

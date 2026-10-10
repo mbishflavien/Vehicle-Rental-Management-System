@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type InputHTMLAttributes, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type InputHTMLAttributes, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 export function Icon({ name, size = 20 }: { name: string; size?: number }) {
@@ -22,6 +22,10 @@ export function Icon({ name, size = 20 }: { name: string; size?: number }) {
     menu: <><path d="M4 7h16M4 12h16M4 17h16"/></>,
     logout: <><path d="M15 4h4v16h-4"/><path d="M10 8 6 12l4 4M6 12h10"/></>,
     check: <path d="m5 12 5 5 9-10"/>,
+    shield: <><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/></>,
+    mail: <><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></>,
+    phone: <><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></>,
+    upload: <><path d="M12 16V4m0 0-5 5m5-5 5 5"/><path d="M5 20h14"/></>,
   };
   return <svg className="icon" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }
@@ -53,13 +57,16 @@ type FieldProps = {
   hint?: string;
 } & InputHTMLAttributes<HTMLInputElement>;
 
-/** Labelled input in the design's style, with an inline error under it. */
-export function Field({ label, icon, error, hint, className = "", ...input }: FieldProps) {
-  return <label className={`field ${error ? "has-error" : ""} ${className}`}>
-    <span>{label}</span>
-    <div className="field-control">{icon && <Icon name={icon}/>}<input {...input} aria-invalid={!!error || undefined}/></div>
-    {error ? <small className="field-error">{error}</small> : hint ? <small className="field-hint">{hint}</small> : null}
-  </label>;
+/** Labelled input in the design's style. Errors and hints are linked with aria-describedby. */
+export function Field({ label, icon, error, hint, className = "", id, ...input }: FieldProps) {
+  const autoId = useId();
+  const inputId = id ?? autoId;
+  const describedBy = error || hint ? `${inputId}-desc` : undefined;
+  return <div className={`field ${error ? "has-error" : ""} ${className}`}>
+    <label htmlFor={inputId}>{label}</label>
+    <div className="field-control">{icon && <Icon name={icon}/>}<input id={inputId} {...input} aria-invalid={!!error || undefined} aria-describedby={describedBy}/></div>
+    {error ? <small id={describedBy} className="field-error">{error}</small> : hint ? <small id={describedBy} className="field-hint">{hint}</small> : null}
+  </div>;
 }
 
 type SelectProps = {
@@ -75,18 +82,20 @@ type SelectProps = {
 };
 
 export function Select({ label, value, onChange, options, icon, error, hint, className = "", placeholder }: SelectProps) {
-  return <label className={`field ${error ? "has-error" : ""} ${className}`}>
-    <span>{label}</span>
+  const id = useId();
+  const describedBy = error || hint ? `${id}-desc` : undefined;
+  return <div className={`field ${error ? "has-error" : ""} ${className}`}>
+    <label htmlFor={id}>{label}</label>
     <div className="field-control select-control">
       {icon && <Icon name={icon}/>}
-      <select value={value} onChange={(e) => onChange(e.target.value)} aria-invalid={!!error || undefined}>
+      <select id={id} value={value} onChange={(e) => onChange(e.target.value)} aria-invalid={!!error || undefined} aria-describedby={describedBy}>
         {placeholder !== undefined && <option value="" disabled>{placeholder}</option>}
         {options.map((o) => <option key={o.value} value={o.value} disabled={o.disabled}>{o.label}</option>)}
       </select>
       <Icon name="chevron" size={16}/>
     </div>
-    {error ? <small className="field-error">{error}</small> : hint ? <small className="field-hint">{hint}</small> : null}
-  </label>;
+    {error ? <small id={describedBy} className="field-error">{error}</small> : hint ? <small id={describedBy} className="field-hint">{hint}</small> : null}
+  </div>;
 }
 
 export function StatusPill({ status }: { status: string }) {

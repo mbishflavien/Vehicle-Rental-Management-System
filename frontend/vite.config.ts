@@ -6,6 +6,11 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-    proxy: { "/api": "http://localhost:8080" },
+    // Keep the browser's Host header so OAuth2 redirect URIs point back at :5173.
+    proxy: {
+      "/api": "http://localhost:8080",
+      "/oauth2": { target: "http://localhost:8080", xfwd: true },
+      "/login/oauth2": { target: "http://localhost:8080", xfwd: true },
+    },
   },
 });

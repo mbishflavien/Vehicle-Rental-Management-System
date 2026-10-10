@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api, errorMessage, type Contract, type ContractStatus } from "../api";
+import { useCan } from "../auth";
 import { Button, DataTable, EmptyState, ErrorBanner, Icon, Loading, RowMenu, StatusPill, TableFooter, useFeedback, usePaged, type MenuAction } from "../components/ui";
 import { period, plate, rwf, shortId } from "../format";
 import { AdminPageHeader, matches, useAdmin } from "./AdminShell";
@@ -12,6 +13,7 @@ type Tab = typeof TABS[number];
 export default function Contracts() {
   const { query, refreshCounts } = useAdmin();
   const { toast, confirm } = useFeedback();
+  const can = useCan();
   const [params, setParams] = useSearchParams();
   const [contracts, setContracts] = useState<Contract[] | null>(null);
   const [error, setError] = useState("");
@@ -80,7 +82,7 @@ export default function Contracts() {
     if (c.contractStatus === "PENDING" || c.contractStatus === "ACTIVE") {
       list.push({ label: "Cancel contract", danger: true, onSelect: () => change(c, "CANCELLED", "Cancel contract", <>The contract will be cancelled and {v} released back to <strong>Available</strong>.</>, true) });
     }
-    list.push({ label: "Delete record", danger: true, onSelect: () => remove(c) });
+    if (can("CONTRACT_DELETE")) list.push({ label: "Delete record", danger: true, onSelect: () => remove(c) });
     return list;
   };
 
@@ -100,10 +102,10 @@ export default function Contracts() {
             <td><strong>{shortId("CTR", c.contractId)}</strong><small className="subcell">{c.issuedByName ? `by ${c.issuedByName}` : "Online booking"}</small></td>
             <td><strong>{c.customer.fullName}</strong><small className="subcell">{c.customer.driverLicenseNumber}</small></td>
             <td><strong>{c.vehicle.model}</strong><small className="subcell">{plate(c.vehicle.plateNumber)}</small></td>
-            <td>{period(c.startDate, c.endDate)}{c.pickupLocation && <small className="subcell">{c.pickupLocation}</small>}</td>
+            <td>{period(c.startDate, c.endDate)}{c.pickupBranch && <small className="subcell">{c.pickupBranch.name}</small>}</td>
             <td><strong>{rwf(c.totalCost)}</strong></td>
             <td><StatusPill status={c.contractStatus}/></td>
-            <td className="actions"><RowMenu actions={actions(c)}/></td>
+            <td className="actions">{actions(c).length > 0 && <RowMenu actions={actions(c)}/>}</td>
           </tr>)}
         </DataTable>
         <TableFooter shown={paged.slice.length} total={rows.length} noun="contracts" {...paged}/>

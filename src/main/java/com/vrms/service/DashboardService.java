@@ -1,11 +1,13 @@
 package com.vrms.service;
 
+import com.vrms.config.CacheConfig;
 import com.vrms.dto.DashboardStats;
 import com.vrms.model.ContractStatus;
 import com.vrms.model.VehicleStatus;
 import com.vrms.repository.CustomerRepository;
 import com.vrms.repository.RentalContractRepository;
 import com.vrms.repository.VehicleRepository;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +32,7 @@ public class DashboardService {
         this.audit = audit;
     }
 
+    @Cacheable(CacheConfig.DASHBOARD)
     @Transactional(readOnly = true)
     public DashboardStats stats() {
         Instant now = Instant.now();

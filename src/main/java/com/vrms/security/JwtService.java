@@ -1,25 +1,35 @@
 package com.vrms.security;
 
+import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import com.vrms.model.User;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.io.Decoders;
-import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.*;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Date;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.Base64;
+import java.util.List;
 
+/**
+ * Issues and validates the OAuth2 bearer access tokens (signed JWTs, HS256).
+ * The API validates them as an OAuth2 resource server; see SecurityConfig.
+ */
 @Service
 public class JwtService {
 
-    private final SecretKey key;
+    public static final String ISSUER = "vrms";
+    public static final String AUDIENCE = "vrms-api";
+
+    private final JwtEncoder encoder;
+    private final JwtDecoder decoder;
     private final Duration lifetime;
 
     public JwtService(@Value("${vrms.jwt.secret}") String secret,
@@ -29,33 +39,40 @@ public class JwtService {
                     "vrms.jwt.secret is not set. Add it to src/main/resources/application-secrets.properties "
                     + "(see application-secrets.properties.example) or set the JWT_SECRET environment variable.");
         }
-        byte[] bytes = Decoders.BASE64.decode(secret);
+        byte[] bytes = Base64.getDecoder().decode(secret.trim());
         if (bytes.length < 32) {
             throw new IllegalStateException("vrms.jwt.secret must decode to at least 32 bytes (256 bits)");
         }
-        this.key = Keys.hmacShaKeyFor(bytes);
+        SecretKey key = new SecretKeySpec(bytes, "HmacSHA256");
+        this.encoder = new NimbusJwtEncoder(new ImmutableSecret<>(key));
+
+        NimbusJwtDecoder nimbus = NimbusJwtDecoder.withSecretKey(key).macAlgorithm(MacAlgorithm.HS256).build();
+        OAuth2TokenValidator<Jwt> audience = jwt -> jwt.getAudience() != null && jwt.getAudience().contains(AUDIENCE)
+                ? OAuth2TokenValidatorResult.success()
+                : OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token", "Wrong audience", null));
+        nimbus.setJwtValidator(new DelegatingOAuth2TokenValidator<>(JwtValidators.createDefaultWithIssuer(ISSUER), audience));
+        this.decoder = nimbus;
         this.lifetime = Duration.ofMinutes(expirationMinutes);
     }
 
     public String issueToken(User user) {
         Instant now = Instant.now();
-        return Jwts.builder()
+        JwtClaimsSet claims = JwtClaimsSet.builder()
+                .issuer(ISSUER)
+                .audience(List.of(AUDIENCE))
                 .subject(user.getUserId().toString())
+                .issuedAt(now)
+                .expiresAt(now.plus(lifetime))
+                .claim("email", user.getEmail())
                 .claim("role", user.getRole().name())
-                .issuedAt(Date.from(now))
-                .expiration(Date.from(now.plus(lifetime)))
-                .signWith(key)
-                .compact();
+                .claim("scope", String.join(" ", user.getRole().getPermissions().stream().map(Enum::name).toList()))
+                .build();
+        JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
+        return encoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();
     }
 
-    /** Returns the user id from a valid, unexpired token, or empty if the token is bad. */
-    public Optional<UUID> parseUserId(String token) {
-        try {
-            Claims claims = Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
-            return Optional.of(UUID.fromString(claims.getSubject()));
-        } catch (JwtException | IllegalArgumentException e) {
-            return Optional.empty();
-        }
+    public JwtDecoder decoder() {
+        return decoder;
     }
 
     public long lifetimeSeconds() { return lifetime.toSeconds(); }
