@@ -10,22 +10,30 @@ booking and status change emails and texts the customer through RabbitMQ.
 
 ![Staff dashboard](docs/screenshots/desktop-admin-dashboard.png)
 
-## How this project meets the brief
+## Grading rubric → evidence
 
-| # | Instruction | Where |
-|---|---|---|
-| 1 | Problem statement, users, objectives, scope; functional requirements; measurable quality attributes; user stories with acceptance criteria | [docs/01-requirements.md](docs/01-requirements.md) |
-| 2 | ER diagram + UML class diagram; domain concepts; technology schema with PKs, FKs, constraints, indexes | [docs/02-data-model.md](docs/02-data-model.md), [Flyway migration](src/main/resources/db/migration/V1__initial_schema.sql) |
-| 3 | Responsive pages in a modern framework; mock-ups across devices | React 19 + TypeScript ([`frontend/`](frontend)), [Figma design](https://www.figma.com/make/9onglo1jX7XiV8dwmBgoU3/Vehicle-Rental-Management-System), [desktop/tablet/phone screens](docs/04-ui-design.md) |
-| 4 | Backend with an architecture style, talking to the frontend | Spring Boot 3 **layered** architecture + **event-driven** messaging, REST/JSON API ([docs/03-architecture.md](docs/03-architecture.md), [Swagger](#urls)) |
-| 5 | Relational **and** non-relational databases | **PostgreSQL** (users, customers, branches, vehicles, contracts) + **MongoDB** (audit trail, notifications, documents in **GridFS**) |
-| 6 | Secure authentication incl. **OAuth2**; performance | **OAuth2 resource server** (signed JWT bearer tokens) + **OAuth2 login with Google/GitHub**; BCrypt, sign-in throttling, CSP. Caching, no N+1 queries, indexes, gzip, code splitting ([§3.3–3.5](docs/03-architecture.md#33-security)) |
-| 7 | **RabbitMQ** for email, SMS and other events | Topic exchange `vrms.events` → email, SMS (Africa's Talking) and staff-alert queues, retries + dead-letter queue ([§3.4](docs/03-architecture.md#34-messaging-rabbitmq)) |
-| 8 | **RBAC** on protected resources | Admin / Agent / Customer → 15 permissions, `@PreAuthorize` on every endpoint, staff management UI ([matrix](docs/03-architecture.md#authorization-rbac)) |
-| 9 | Git with meaningful commits; PR to main | Feature-by-feature history on `feat/fullstack`, [pull request #1](https://github.com/mbishflavien/Vehicle-Rental-Management-System/pull/1) |
-| Bonus 1 | DevOps for deployment | Multi-stage **Dockerfile**, **docker compose** stack, **GitHub Actions** CI/CD publishing the image to GHCR |
-| Bonus 2 | Testing & QA | **32 backend** tests (unit + integration on real PostgreSQL/MongoDB/RabbitMQ/SMTP via **Testcontainers**) + **13 frontend** tests (Vitest), all in CI ([docs/05-testing.md](docs/05-testing.md)) |
-| Bonus 3 | New technology | Testcontainers, Flyway, GridFS, Spring Security OAuth2, Africa's Talking SMS, Mailpit, OpenAPI/Swagger, Vitest, Playwright screenshots |
+**Mid-term (30 marks)**
+
+| # | Criterion | Marks | Evidence |
+|---|---|:-:|---|
+| 1 | Problem statement, target users, objectives, scope; functional/business requirements; measurable quality attributes (usability, performance, reliability, security); 2–3 user stories with acceptance criteria | 10 | [docs/01-requirements.md](docs/01-requirements.md): §1.1–1.4 problem/users/objectives/scope, §1.5 requirements BR-01…FR-14, §1.6 quality attributes with targets and measured results, §1.7 three user stories with Given/When/Then criteria |
+| 2 | ER-style diagram or UML class diagram: core entities, attributes, relationships | 10 | [docs/02-data-model.md §2.1–2.2](docs/02-data-model.md): ER diagram and UML class diagram ([PNG: erd](docs/diagrams/erd.png), [uml](docs/diagrams/uml-class-diagram.png)) |
+| 3 | Principal domain concepts (actors, processes, data objects), implementation-independent | 5 | [docs/02-data-model.md §2.3](docs/02-data-model.md#23-domain-concepts-implementation-independent) + [contract state machine](docs/diagrams/contract-state-machine.png) |
+| 4 | Technology-oriented schema with primary keys, foreign keys, constraints, indexes | 5 | [docs/02-data-model.md §2.4](docs/02-data-model.md#24-technology-oriented-schema) and the executable [Flyway migration](src/main/resources/db/migration/V1__initial_schema.sql) (PostgreSQL), plus MongoDB collections and RabbitMQ topology |
+
+**Final (40 marks)**
+
+| # | Criterion | Marks | Evidence |
+|---|---|:-:|---|
+| 1 | Responsive web pages in a modern framework; mock-ups/wireframes showing layout across devices | 10 | React 19 + TypeScript ([`frontend/`](frontend)); [Figma design](https://www.figma.com/make/9onglo1jX7XiV8dwmBgoU3/Vehicle-Rental-Management-System); [screens at desktop 1440 / tablet 834 / phone 390 px](docs/04-ui-design.md) with the breakpoint strategy |
+| 2 | Backend with an architecture style and framework, communicating with the frontend and producing outputs for users | 15 | Spring Boot 3, **layered** (controller → service → repository) + **event-driven** messaging ([docs/03-architecture.md](docs/03-architecture.md)); REST/JSON API documented live at `/swagger-ui.html`; outputs: dashboard KPIs, contracts, emails/SMS, CSV exports |
+| 3 | Relational **and** non-relational databases for documents and operation data | 5 | **PostgreSQL**: users, customers, branches, vehicles, contracts. **MongoDB**: audit trail and notifications (operation data), customer licence/ID scans in **GridFS** (documents) |
+| 4 | Secure authentication incl. **OAuth2**; performance optimisation; **RBAC** authorisation | 5 | OAuth2 resource server (signed JWT bearer tokens) + OAuth2 login with Google/GitHub; BCrypt, sign-in lockout, CSP. Performance: caches, entity graphs, indexes, gzip, code splitting (measured p95 < 100 ms). RBAC: Admin/Agent/Customer → 15 permissions on every endpoint ([matrix](docs/03-architecture.md#authorization-rbac)) |
+| 5 | **RabbitMQ** as message broker for email, SMS and other events | 3 | Topic exchange `vrms.events` → email, SMS and staff-alert queues, retries + dead-letter queue ([§3.4](docs/03-architecture.md#34-messaging-rabbitmq)); sent messages visible in the app and in Mailpit |
+| 6 | Git throughout, meaningful commits, PR to main | 2 | One commit per feature on `feat/fullstack`, [pull request #1](https://github.com/mbishflavien/Vehicle-Rental-Management-System/pull/1) |
+| Bonus 1 | DevOps for deployment | + | Multi-stage **Dockerfile**, **docker compose** full stack, **GitHub Actions** CI/CD publishing the image to GHCR |
+| Bonus 2 | Software testing & QA | + | **32 backend** tests (unit + integration on real PostgreSQL/MongoDB/RabbitMQ/SMTP via **Testcontainers**) + **13 frontend** tests (Vitest), all in CI ([docs/05-testing.md](docs/05-testing.md)) |
+| Bonus 3 | New technology | + | Testcontainers, Flyway, GridFS, Spring Security OAuth2, Africa's Talking SMS, Mailpit, OpenAPI/Swagger, Vitest, Playwright |
 
 ## Features
 
