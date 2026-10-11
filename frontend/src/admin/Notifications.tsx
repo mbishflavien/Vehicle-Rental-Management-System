@@ -22,6 +22,7 @@ export default function Notifications() {
     matches(query, n.recipient, n.subject, n.body.slice(0, 200), n.eventType)), [items, channel, query]);
   const paged = usePaged(rows, 15);
   const failed = (items ?? []).filter((n) => n.status === "FAILED").length;
+  const latestSms = (items ?? []).find((n) => n.channel === "SMS");
 
   return <>
     <AdminPageHeader title="Every message, delivered." description="Emails and texts sent by the RabbitMQ consumers, newest first.">
@@ -31,6 +32,7 @@ export default function Notifications() {
       </select><Icon name="chevron" size={16}/></label>
       <Button variant="outline" onClick={load}>Refresh</Button>
     </AdminPageHeader>
+    {latestSms?.status === "SIMULATED" && <div className="notice compact-notice"><span>i</span><p>SMS are currently <strong>simulated</strong>: they are recorded here but not sent to any phone. Set <code>AT_API_KEY</code> (Africa's Talking) to deliver them.</p></div>}
     {failed > 0 && <ErrorBanner message={`${failed} message${failed === 1 ? "" : "s"} failed to deliver. RabbitMQ retried them before moving them to the dead-letter queue.`}/>}
     {error && <ErrorBanner message={error} onRetry={load}/>}
     <section className="admin-card">

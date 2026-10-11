@@ -451,6 +451,8 @@ tbody tr:nth-last-child(-n+2):not(:nth-child(-n+2)) .row-menu-list { top: auto; 
 .doc-note { grid-column: 1 / -1; font-size: 11px; color: var(--taupe); }
 
 /* Notifications */
+.compact-notice { margin-bottom: 18px; }
+.compact-notice code { font-size: 11px; }
 tr.clickable { cursor: pointer; }
 .channel { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
 .channel-email { color: var(--terracotta-dark); }

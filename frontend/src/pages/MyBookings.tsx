@@ -64,7 +64,7 @@ export default function MyBookingsPage() {
         <h2>Messages from VRMS</h2>
         <ul>{messages.slice(0, 8).map((m) => <li key={m.notificationId}><button onClick={() => setOpenMessage(m)}>
           <Icon name={m.channel === "EMAIL" ? "mail" : "phone"} size={16}/>
-          <span><strong>{m.subject ?? m.body}</strong><small>{m.channel === "EMAIL" ? "Email" : "SMS"} to {m.recipient} · {relativeTime(m.createdAt)}</small></span>
+          <span><strong>{m.subject ?? m.body}</strong><small>{m.channel === "EMAIL" ? "Email" : "SMS"} to {m.recipient} · {relativeTime(m.createdAt)}{m.status === "SIMULATED" ? " · simulated (not delivered)" : m.status === "FAILED" ? " · not delivered" : ""}</small></span>
         </button></li>)}</ul>
       </section>}
     </main>
